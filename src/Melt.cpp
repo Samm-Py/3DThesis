@@ -27,7 +27,7 @@ void beam_trace_perimeter(vector<int>& test_pts, Grid& grid, const Simdat& sim, 
 		const Beam& beam = sim.beams[pathNum];
 
 		// Out of bounds check
-		const double t_sub = (sim.param.radiusCheck*sim.param.radiusCheck-1)*(beam.ax*beam.ax)/(12.0*sim.material.a);
+		const double t_sub = (sim.param.radiusCheck*sim.param.radiusCheck-1)*(beam.ax*beam.ax)/(12.0*thesis::to_double(sim.material.a));
 		const double t_start = (t_end_norm-t_sub<0.0) ? 0.0 : t_end_norm-t_sub;
 		const double t_end = t_end_norm;
 		const double rCheck2 = sim.param.radiusCheck*sim.param.radiusCheck*beam.ax*beam.ax;
@@ -82,15 +82,15 @@ void beam_trace_perimeter(vector<int>& test_pts, Grid& grid, const Simdat& sim, 
 			int_seg current_beam = Util::GetBeamLoc(t_end, seg_end, path, sim);
 			
 			// Get grid positions
-			int x_grid_num = static_cast<int>(std::floor((current_beam.xb - sim.domain.xmin) / sim.domain.xres));
-			int y_grid_num = static_cast<int>(std::floor((current_beam.yb - sim.domain.ymin) / sim.domain.yres));
+			int x_grid_num = static_cast<int>(std::floor((thesis::to_double(current_beam.xb) - sim.domain.xmin) / sim.domain.xres));
+			int y_grid_num = static_cast<int>(std::floor((thesis::to_double(current_beam.yb) - sim.domain.ymin) / sim.domain.yres));
 			const int z_grid_num = sim.domain.znum-1;
 
 			// Check conditions and call the lambda
-			if (x_grid_num < 0) { add_perimeter_points(0, true, 0, sim.domain.ynum, current_beam.xb, current_beam.yb);}
-			if (x_grid_num > sim.domain.xnum - 1) {add_perimeter_points(sim.domain.xnum - 1, true, 0, sim.domain.ynum, current_beam.xb, current_beam.yb);}
-			if (y_grid_num < 0) {add_perimeter_points(0, false, 0, sim.domain.xnum, current_beam.xb, current_beam.yb);}
-			if (y_grid_num > sim.domain.ynum - 1) {add_perimeter_points(sim.domain.ynum - 1, false, 0, sim.domain.xnum, current_beam.xb, current_beam.yb);}
+			if (x_grid_num < 0) { add_perimeter_points(0, true, 0, sim.domain.ynum, thesis::to_double(current_beam.xb), thesis::to_double(current_beam.yb));}
+			if (x_grid_num > sim.domain.xnum - 1) {add_perimeter_points(sim.domain.xnum - 1, true, 0, sim.domain.ynum, thesis::to_double(current_beam.xb), thesis::to_double(current_beam.yb));}
+			if (y_grid_num < 0) {add_perimeter_points(0, false, 0, sim.domain.xnum, thesis::to_double(current_beam.xb), thesis::to_double(current_beam.yb));}
+			if (y_grid_num > sim.domain.ynum - 1) {add_perimeter_points(sim.domain.ynum - 1, false, 0, sim.domain.xnum, thesis::to_double(current_beam.xb), thesis::to_double(current_beam.yb));}
 		}	
 	}
 }
@@ -152,8 +152,8 @@ void Melt::beam_trace(vector<int>& test_pts, Grid& grid, const Simdat& sim, cons
 			int_seg current_beam = Util::GetBeamLoc(t_end, seg_end, path, sim);
 			
 			// Get grid positions
-			int x_grid_num = static_cast<int>(std::floor((current_beam.xb - sim.domain.xmin) / sim.domain.xres));
-			int y_grid_num = static_cast<int>(std::floor((current_beam.yb - sim.domain.ymin) / sim.domain.yres));
+			int x_grid_num = static_cast<int>(std::floor((thesis::to_double(current_beam.xb) - sim.domain.xmin) / sim.domain.xres));
+			int y_grid_num = static_cast<int>(std::floor((thesis::to_double(current_beam.yb) - sim.domain.ymin) / sim.domain.yres));
 			const int z_grid_num = sim.domain.znum-1;
 
 			// If out of bounds, will be covered by perimeter tracker
@@ -338,7 +338,7 @@ void Melt::calc_depth_max(vector<int>& depths, vector<double>& depth_max, vector
 			const double T_liq = grid.get_T(p_liq);
 			const double T_sol = grid.get_T(p_sol);
 
-			depth = depth_liq + (sim.material.T_liq - T_liq) / (T_sol - T_liq);
+			depth = depth_liq + (thesis::to_double(sim.material.T_liq) - T_liq) / (T_sol - T_liq);
 		}
 
 		// If depth is greater
@@ -437,8 +437,8 @@ void Melt::calc_mp_info(const vector<int>& depths, Grid& grid, const Simdat& sim
 			int_seg current_beam = Util::GetBeamLoc(t, seg, path, sim);
 
 			// Get grid positions
-			int x_grid_num = static_cast<int>(std::floor((current_beam.xb - sim.domain.xmin) / sim.domain.xres));
-			int y_grid_num = static_cast<int>(std::floor((current_beam.yb - sim.domain.ymin) / sim.domain.yres));
+			int x_grid_num = static_cast<int>(std::floor((thesis::to_double(current_beam.xb) - sim.domain.xmin) / sim.domain.xres));
+			int y_grid_num = static_cast<int>(std::floor((thesis::to_double(current_beam.yb) - sim.domain.ymin) / sim.domain.yres));
 			const int z_grid_num = sim.domain.znum-1;
 
 			// Bring close to grid

@@ -17,6 +17,8 @@
 #include <climits>
 #include <cfloat>
 
+#include "oti_scalar.h"
+
 using std::vector;
 using std::string;
 using std::deque;
@@ -24,8 +26,11 @@ using std::list;
 
 #define PI 3.14159265358979323846
 
+// Integration segment. Coordinates come from the (double) scan path, but the
+// diffusion/weight/power fields are Real so they can carry the material- and
+// beam-power derivatives.
 struct int_seg {
-	double xb, yb, zb, phix, phiy, phiz, dtau, qmod;
+	Real xb, yb, zb, phix, phiy, phiz, dtau, qmod;
 };
 
 // What is used to integrate
@@ -35,7 +40,7 @@ struct Nodes {
 	// {phix,phiy,phiz} = diffusion
 	// {dtau} = node weight
 	// {expmod} = frontloads computation
-	vector<double> xb, yb, zb, phix, phiy, phiz, dtau, expmod;
+	vector<Real> xb, yb, zb, phix, phiy, phiz, dtau, expmod;
 };
 
 // What is read in from the paths
@@ -57,24 +62,29 @@ struct coord
 struct FileNames {
 	string	name, dataDir, mode, material, beam, path;
 	string	domain, output, settings;
+	string	rank_suffix; // "" in serial; ".<rank>" under MPI so per-rank
+	                     // snapshot slices don't clobber a shared filename
 };
 
-// Material constants
+// Material constants. Thermophysical properties are Real so derivatives w.r.t.
+// conductivity/density/specific-heat propagate (diffusivity a inherits them);
+// the CET fit parameters stay double (post-processing only).
 struct Material {
-	double kon; // Thermal Conductivty
-	double rho; // Density
-	double cps; // Specifc Heat
-	double T_liq; // Liquidus Temperature
-	double T_init; // Inital Temperature (Preheat/Ambient)
-	double a; // Thermal Diffusivity
+	Real kon; // Thermal Conductivty
+	Real rho; // Density
+	Real cps; // Specifc Heat
+	Real T_liq; // Liquidus Temperature
+	Real T_init; // Inital Temperature (Preheat/Ambient)
+	Real a; // Thermal Diffusivity
 	double cet_a, cet_n, cet_N0; // Parameters for CET
 };
 
-// Beam specific parameters
+// Beam specific parameters. Power q is a Real design variable; beam shape and
+// the adaptive nondimensional timestep stay double.
 struct Beam {
 	double ax, ay, az; // Beam Shape
 	double eff; // Absoprtion Efficiency
-	double q; // Beam Power
+	Real q; // Beam Power
 	double nond_dt; // Nondimensional Time
 };
 

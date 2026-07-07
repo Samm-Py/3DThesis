@@ -39,7 +39,7 @@ namespace Util {
 	// Function to cleat all nodes
 	void	ClearNodes(Nodes&);
 	// Checks if it is inside the maximum radius
-	bool	InRMax(const double, const double, const Domain&, const Settings&);
+	bool	InRMax(const Real, const Real, const Domain&, const Settings&);
 	// Calculates the time to integrate back to
 	double	t0calc(const double, const Beam&, const Material&, const Settings&);
 	// Gets the maximum allowable step size for a path segment

@@ -47,6 +47,11 @@ namespace Init {
 	void	SetValues(int&,  string, int, string, int, const bool);
 	void	SetValues(bool&, string, bool, string, int, const bool);
 	void	SetValues(double&, string, double, string, int, const bool);
+#ifdef THESIS_ENABLE_OTI
+	// In an OTI build Real is a distinct type from double; parses into the real
+	// part only (design variables are seeded explicitly after read).
+	void	SetValues(Real&, string, double, string, int, const bool);
+#endif
 
 	void 	checkAsterisks(const std::string, const std::string, const std::string, const bool);
 

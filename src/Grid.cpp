@@ -278,28 +278,30 @@ double Grid::Calc_T(const double t, const Nodes& nodes, const Simdat& sim, const
 	Adapted from Nguyen et al., Welding Journal, 1999 (Eq. 7)
 	**************************************************************************************************/
 
-	const double xp = get_x(p);
-    const double yp = get_y(p);
-    const double zp = get_z(p);
-    
-    double dT = 0;
-	for (size_t iter = 0; iter < nodes.size; iter++) {
-		
-		const double dx = xp - nodes.xb[iter];
-		const double dy = yp - nodes.yb[iter];
-		const double dz = zp - nodes.zb[iter];
+	// Seed the evaluation point into the x/y/z slots so the temperature carries
+	// dT/dx, dT/dy, dT/dz (the spatial gradient).
+	const Real xp = thesis::seed(thesis::DV_X, get_x(p));
+    const Real yp = thesis::seed(thesis::DV_Y, get_y(p));
+    const Real zp = thesis::seed(thesis::DV_Z, get_z(p));
 
-		const double phi = exp(-3.0 * ((dx * dx * nodes.phix[iter]) + (dy * dy * nodes.phiy[iter]) + (dz * dz * nodes.phiz[iter])) + nodes.expmod[iter]);
-		const double dT_seg = nodes.dtau[iter] * phi;
-		
+    Real dT = 0;
+	for (size_t iter = 0; iter < nodes.size; iter++) {
+
+		const Real dx = xp - nodes.xb[iter];
+		const Real dy = yp - nodes.yb[iter];
+		const Real dz = zp - nodes.zb[iter];
+
+		const Real phi = exp(-3.0 * ((dx * dx * nodes.phix[iter]) + (dy * dy * nodes.phiy[iter]) + (dz * dz * nodes.phiz[iter])) + nodes.expmod[iter]);
+		const Real dT_seg = nodes.dtau[iter] * phi;
+
 		dT += dT_seg;
 	}
 
-	const double T_temp = sim.material.T_init + dT;
-	
-	if (set) { 
+	const Real T_temp = sim.material.T_init + dT;
+
+	if (set) {
 		set_T(T_temp, p);
-		add_T_hist(T_temp, p);
+		add_T_hist(thesis::to_double(T_temp), p);
 		add_t_hist(t, p);
 		set_T_calc_flag(true, p);
 		if (T_temp >= sim.material.T_liq) {
@@ -310,7 +312,7 @@ double Grid::Calc_T(const double t, const Nodes& nodes, const Simdat& sim, const
 		}
 	}
 
-	return T_temp;
+	return thesis::to_double(T_temp);
 }
 
 void Grid::Solidify(const double t, const Simdat& sim, const int p) {
@@ -345,9 +347,9 @@ double Grid::Calc_Solidification_time(const double t, const Simdat& sim, const i
 	int maxIter = sim.settings.max_iter;
 	
 	// Temperatures
-	double T2 = T[p];
+	double T2 = thesis::to_double(T[p]);
 	double T1 = T_last[p];
-	double T0 = sim.material.T_liq;
+	double T0 = thesis::to_double(sim.material.T_liq);
 
 	// Times
 	double t2 = t;
@@ -421,19 +423,19 @@ vector<vector<double>> Grid::Calc_Solidficiaton_Primary(const double t, const No
 	double dT_t = 0;
 	for (size_t iter = 0; iter < nodes.size; iter++) {
 
-		const double dx = xp - nodes.xb[iter];
-		const double dy = yp - nodes.yb[iter];
-		const double dz = zp - nodes.zb[iter];
+		const double dx = xp - thesis::to_double(nodes.xb[iter]);
+		const double dy = yp - thesis::to_double(nodes.yb[iter]);
+		const double dz = zp - thesis::to_double(nodes.zb[iter]);
 
-		const double phi = exp(-3.0 * ((dx * dx * nodes.phix[iter]) + (dy * dy * nodes.phiy[iter]) + (dz * dz * nodes.phiz[iter])) + nodes.expmod[iter]);
+		const double phi = exp(-3.0 * ((dx * dx * thesis::to_double(nodes.phix[iter])) + (dy * dy * thesis::to_double(nodes.phiy[iter])) + (dz * dz * thesis::to_double(nodes.phiz[iter]))) + thesis::to_double(nodes.expmod[iter]));
 
-		const double dT_seg = nodes.dtau[iter] * phi;
+		const double dT_seg = thesis::to_double(nodes.dtau[iter]) * phi;
 
 		dT += dT_seg;
-		
-		const double ddpx = (-6.0 * nodes.phix[iter]);
-		const double ddpy = (-6.0 * nodes.phiy[iter]);
-		const double ddpz = (-6.0* nodes.phiz[iter]);
+
+		const double ddpx = (-6.0 * thesis::to_double(nodes.phix[iter]));
+		const double ddpy = (-6.0 * thesis::to_double(nodes.phiy[iter]));
+		const double ddpz = (-6.0* thesis::to_double(nodes.phiz[iter]));
 
 		const double dpx = (ddpx * dx);
 		const double dpy = (ddpy * dy);
@@ -444,7 +446,7 @@ vector<vector<double>> Grid::Calc_Solidficiaton_Primary(const double t, const No
 		Gz_temp += dT_seg * dpz;	//z-gradient
 
 		Laplace += dT_seg * (dpx * dpx + dpy * dpy + dpz * dpz + ddpx + ddpy + ddpz); //laplacian
-		dT_t += (nodes.dtau[iter]== 0) ? phi : 0;  //Notice that the interval of time we are integrating over is of size, that is because we are looking the instantaneous change at that time
+		dT_t += (thesis::to_double(nodes.dtau[iter])== 0) ? phi : 0;  //Notice that the interval of time we are integrating over is of size, that is because we are looking the instantaneous change at that time
 	}
 
 	vector<double> primaryParams = { Gx_temp, Gy_temp, Gz_temp, Laplace, dT_t };
@@ -478,19 +480,19 @@ vector<vector<double>> Grid::Calc_Solidficiaton_Secondary(const double t, const 
 
 	for (size_t iter = 0; iter < nodes.size; iter++) {
 
-		const double dx = xp - nodes.xb[iter];
-		const double dy = yp - nodes.yb[iter];
-		const double dz = zp - nodes.zb[iter];
+		const double dx = xp - thesis::to_double(nodes.xb[iter]);
+		const double dy = yp - thesis::to_double(nodes.yb[iter]);
+		const double dz = zp - thesis::to_double(nodes.zb[iter]);
 
-		const double phi = exp(-3.0 * ((dx * dx * nodes.phix[iter]) + (dy * dy * nodes.phiy[iter]) + (dz * dz * nodes.phiz[iter])) + nodes.expmod[iter]);
+		const double phi = exp(-3.0 * ((dx * dx * thesis::to_double(nodes.phix[iter])) + (dy * dy * thesis::to_double(nodes.phiy[iter])) + (dz * dz * thesis::to_double(nodes.phiz[iter]))) + thesis::to_double(nodes.expmod[iter]));
 
-		const double dT_seg = nodes.dtau[iter] * phi;
+		const double dT_seg = thesis::to_double(nodes.dtau[iter]) * phi;
 
 		dT += dT_seg;
-		
-		const double ddpx = (-6.0 * nodes.phix[iter]);
-		const double ddpy = (-6.0 * nodes.phiy[iter]);
-		const double ddpz = (-6.0* nodes.phiz[iter]);
+
+		const double ddpx = (-6.0 * thesis::to_double(nodes.phix[iter]));
+		const double ddpy = (-6.0 * thesis::to_double(nodes.phiy[iter]));
+		const double ddpz = (-6.0* thesis::to_double(nodes.phiz[iter]));
 
 		const double dpx = (ddpx * dx);
 		const double dpy = (ddpy * dy);
@@ -501,7 +503,7 @@ vector<vector<double>> Grid::Calc_Solidficiaton_Secondary(const double t, const 
 		Gz_temp += dT_seg * dpz;	//z-gradient
 
 		Laplace += dT_seg * (dpx * dpx + dpy * dpy + dpz * dpz + ddpx + ddpy + ddpz); //laplacian
-		dT_t += (nodes.dtau[iter]== 0) ? phi : 0;  //Notice that the interval of time we are integrating over is of size, that is because we are looking the instantaneous change at that time
+		dT_t += (thesis::to_double(nodes.dtau[iter])== 0) ? phi : 0;  //Notice that the interval of time we are integrating over is of size, that is because we are looking the instantaneous change at that time
 		
 		dGxdx += dT_seg * (dpx * dpx + ddpx);
 		dGxdy += dT_seg * (dpx * dpy);
@@ -532,7 +534,7 @@ void Grid::Set_Solidficiaton_Primary(const vector<double>& primaryParams, const 
 	const double Gyu_temp = Gy_temp / G_temp;
 	const double Gzu_temp = Gz_temp / G_temp;
 
-	const double dTdt_temp = abs(sim.material.a * Laplace + dT_t);
+	const double dTdt_temp = abs(thesis::to_double(sim.material.a) * Laplace + dT_t);
 	const double V_temp = dTdt_temp / G_temp;
 
 	const double eqFrac_temp = (1.0 - exp((-4 * PI * sim.material.cet_N0 / 3) * pow(G_temp * (sim.material.cet_n + 1) / (pow(sim.material.cet_a * V_temp, 1 / sim.material.cet_n)), -3)));
@@ -567,7 +569,7 @@ void Grid::Set_Solidficiaton_Secondary(const vector<double>& primaryParams, cons
 	const double Gyu_temp = Gy_temp / G_temp;
 	const double Gzu_temp = Gz_temp / G_temp;
 
-	const double dTdt_temp = abs(sim.material.a * Laplace + dT_t);
+	const double dTdt_temp = abs(thesis::to_double(sim.material.a) * Laplace + dT_t);
 	const double V_temp = dTdt_temp / G_temp;
 
 	const double eqFrac_temp = 1 - exp((-4 * PI * sim.material.cet_N0 / 3) * pow(G_temp * (sim.material.cet_n + 1) / (pow(sim.material.cet_a * V_temp, 1 / sim.material.cet_n)), -3));
