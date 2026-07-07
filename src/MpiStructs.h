@@ -60,6 +60,9 @@ public:
         // Update local rank printing
         sim.print = rank == 0;
         sim.mpi = size() > 1;
+        // Per-rank suffix so snapshot slices (which carry no rank tag of their
+        // own) write to distinct files instead of clobbering a shared name.
+        if (sim.mpi) { sim.files.rank_suffix = "." + name; }
     }
 
     // Make x-y bounds for local domain

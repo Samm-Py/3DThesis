@@ -221,6 +221,17 @@ void	Init::SetValues(double& simValue, string input, double simDefault, string n
 	return;
 }
 
+#ifdef THESIS_ENABLE_OTI
+void	Init::SetValues(Real& simValue, string input, double simDefault, string name, int err, const bool print) {
+	if (input == string("")) {
+		simValue = simDefault;
+		Init::setPrint(simDefault, name, err, print);
+	}
+	else { simValue = std::stod(input); }
+	return;
+}
+#endif
+
 void    Init::checkAsterisks(const std::string s, const std::string del, const std::string file, const bool print) {
 	// If there are multiple '*', there is a problem
 	if (s.find(del) != string::npos) {
@@ -433,6 +444,12 @@ void	Init::FileRead_Material(Material& material, const string& file, const bool 
 	Init::SetValues(material.cps, values[0][3], 600.00, "Specific Heat", 1, print);
 	Init::SetValues(material.rho, values[0][4], 7451.0, "Density", 1, print);
 
+	// Seed the independent material design variables (diffusivity a is derived
+	// from these in SetDiffusivity below, so it inherits their derivatives).
+	material.kon = thesis::seed(thesis::DV_KON, thesis::to_double(material.kon));
+	material.cps = thesis::seed(thesis::DV_CPS, thesis::to_double(material.cps));
+	material.rho = thesis::seed(thesis::DV_RHO, thesis::to_double(material.rho));
+
 	Init::SetValues(material.cet_N0, values[1][0], DBL_MAX, "CET: N0", 0, print);
 	Init::SetValues(material.cet_n, values[1][1], DBL_MAX, "CET: n", 0, print);
 	Init::SetValues(material.cet_a, values[1][2], DBL_MAX, "CET: a", 0, print);
@@ -508,6 +525,9 @@ void	Init::FileRead_Beam(Beam& beam, const string& file, const bool print) {
 
 	Init::SetValues(beam.q, values[1][0], 1200, "Power", 1, print);
 	Init::SetValues(beam.eff, values[1][1], 1.0, "Efficiency", 1, print);
+
+	// Seed beam power; the efficiency/scale in SetBeamPower propagates it.
+	beam.q = thesis::seed(thesis::DV_Q, thesis::to_double(beam.q));
 
 	Init::SetBeamPower(beam);
 

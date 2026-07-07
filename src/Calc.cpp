@@ -93,7 +93,7 @@ void Calc::GaussIntegrate(Nodes& nodes, const Simdat& sim, const double t, const
 		int seg_temp = start_seg[i];
 
 		// Get beta for beam
-		const double beta = pow(3.0 / PI, 1.5) * beam.q / (sim.material.rho * sim.material.cps);
+		const Real beta = pow(3.0 / PI, 1.5) * beam.q / (sim.material.rho * sim.material.cps);
 
 		// Keep incrementing up if t is greater than the end of the path segment but also below the end time of the scan
 		while ((t > path[seg_temp].seg_time) && (seg_temp + 1 < path.size())) { seg_temp++; }
@@ -173,7 +173,7 @@ void Calc::GaussIntegrate(Nodes& nodes, const Simdat& sim, const double t, const
 			}
 
 			//Add Quadrature Points
-			double tau, ct;
+			double tau; Real ct;
 			for (int a = (2 * curOrder - 3); a > (curOrder - 3); a--) {
 				double tp = 0.5 * ((t2 - t1) * locs[a] + (t2 + t1));
 				tau = t - tp;
@@ -239,7 +239,7 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 		int seg_temp = start_seg[i];
 
 		// Get beta for beam
-		const double beta = pow(3.0 / PI, 1.5) * beam.q / (sim.material.rho * sim.material.cps);
+		const Real beta = pow(3.0 / PI, 1.5) * beam.q / (sim.material.rho * sim.material.cps);
 
 		// Keep incrementing up if t is greater than the end of the path segment but also below the end time of the scan
 		while ((t > path[seg_temp].seg_time) && (seg_temp + 1 < path.size())) { seg_temp++; }
@@ -332,11 +332,11 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 			else { curStep_use = curStep_max; }
 
 			int_seg current_beam_t2 = Util::GetBeamLoc(t2, seg_temp, path, sim);
-			xp = current_beam_t2.xb;
-			yp = current_beam_t2.yb;
+			xp = thesis::to_double(current_beam_t2.xb);
+			yp = thesis::to_double(current_beam_t2.yb);
 
 			// Diffusion Distance Squared (Distance it diffused by *some amount*, squared)
-			r2 = log(2.0) / 8.0 * (beam.ax * beam.ax) * (12.0 * (t - t2) * sim.material.a / (beam.ax * beam.ax) + 1.0);
+			r2 = log(2.0) / 8.0 * (beam.ax * beam.ax) * (12.0 * (t - t2) * thesis::to_double(sim.material.a) / (beam.ax * beam.ax) + 1.0);
 
 			seg_temp_2 = seg_temp;
 
@@ -443,7 +443,7 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 			}
 
 			//Add Quadrature Points using the same average for x, y, and qmod (CAN BE IMPROVED)
-			double tau, ct;
+			double tau; Real ct;
 			if (num_comb_segs) {
 				int_seg current_beam;
 				if (sum_qmodt > 0.0) {

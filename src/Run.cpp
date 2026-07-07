@@ -113,9 +113,9 @@ void Run::Snapshots_NoTracking(Grid& grid, const Simdat& sim) {
 		}
 		std::cout << "\n";
 
-		// Output 
-		grid.Output(sim, "Snapshot." + Util::ZeroPadNumber(itert, 2));
-		
+		// Output
+		grid.Output(sim, "Snapshot." + Util::ZeroPadNumber(itert, 2) + sim.files.rank_suffix);
+
 		// Clear quadrature nodes
 		Util::ClearNodes(nodes);
 	}
@@ -184,7 +184,7 @@ void Run::Snapshots_Volume(Grid& grid, const Simdat& sim) {
 		}
 		
 		// Output results
-		grid.Output(sim, "Snapshot." + Util::ZeroPadNumber(i, 2));
+		grid.Output(sim, "Snapshot." + Util::ZeroPadNumber(i, 2) + sim.files.rank_suffix);
 
 		// Clear integration segments
 		Util::ClearNodes(nodes);
@@ -736,8 +736,8 @@ void Run::Stork(Grid& grid, const Simdat& sim) {
 	vector<uint8_t> c_beta(c_pnum, static_cast<uint8_t>(0));
 
 	// Info for "vertices"
-	vector<double> T_alpha(sim.domain.pnum, sim.material.T_init);
-	vector<double> T_beta(sim.domain.pnum, sim.material.T_init);
+	vector<double> T_alpha(sim.domain.pnum, thesis::to_double(sim.material.T_init));
+	vector<double> T_beta(sim.domain.pnum, thesis::to_double(sim.material.T_init));
 	vector<uint8_t> T_calc_alpha(sim.domain.pnum, static_cast<uint8_t>(1));
 	vector<uint8_t> T_calc_beta(sim.domain.pnum, static_cast<uint8_t>(1));
 	vector<uint8_t> isLiq(sim.domain.pnum, static_cast<uint8_t>(0));

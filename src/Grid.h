@@ -21,7 +21,8 @@
 #include <cstdint>
 #include <vector>
 #include <string>
-#include <functional> 
+#include <functional>
+#include <utility>
 
 using std::bind;
 using std::function;
@@ -77,7 +78,7 @@ private:
 	double* y = NULL; // coordinate - always needed
 	double* z = NULL; // coordinate - always needed
 
-	double* T = NULL; // temperature - always needed
+	Real* T = NULL; // temperature (Real: carries design-variable derivatives)
 	double* T_last = NULL; // last temperature - needed for solidification times
 
 	double* tSol = NULL;
@@ -150,10 +151,25 @@ public:
 			outputFuncs.push_back(bind(&Grid::get_z, this, _1));
 		}
 
-		T = new double[pnum]();
+		T = new Real[pnum]();
 		if (sim.output.T) {
 			outputNames.push_back("T");
 			outputFuncs.push_back(bind(&Grid::get_T, this, _1));
+#ifdef THESIS_ENABLE_OTI
+			// OTI builds also emit dT/d(design variable) next to T. Produced
+			// automatically by the AD arithmetic -- no finite differencing.
+			static const std::pair<const char*, int> oti_cols[] = {
+				{"dT_dx",   thesis::DV_X},   {"dT_dy",   thesis::DV_Y},
+				{"dT_dz",   thesis::DV_Z},   {"dT_dQ",   thesis::DV_Q},
+				{"dT_dkon", thesis::DV_KON}, {"dT_drho", thesis::DV_RHO},
+				{"dT_dcps", thesis::DV_CPS},
+			};
+			for (const auto& col : oti_cols) {
+				const int dv = col.second;
+				outputNames.push_back(col.first);
+				outputFuncs.push_back([this, dv](const int p) { return get_T_deriv(p, dv); });
+			}
+#endif
 		}
 		if (sim.output.T_hist) {
 			T_hist = new vector<double>[pnum];
@@ -326,8 +342,12 @@ public:
 		return zcoord; 
 	}
 
-	double get_T(const int p) { return T[p]; }
+	double get_T(const int p) { return thesis::to_double(T[p]); }
 	double get_T_last(const int p) { return T_last[p]; }
+
+	// Derivative of stored temperature w.r.t. design variable dv (thesis::DesignVar);
+	// returns 0 in a plain-double build. This is how AD results are read out.
+	double get_T_deriv(const int p, const int dv) { return thesis::deriv(T[p], dv); }
 
 	double get_tSol(const int p) { return tSol[p]; }
 	double get_G(const int p) { return G[p]; }
@@ -373,11 +393,11 @@ public:
 	void set_T_calc_flag(const bool b, const int p) { if (T_calc_flag != NULL) { T_calc_flag[p] = b; } }
 	void set_output_flag(const bool b, const int p) { if (output_flag != NULL) { output_flag[p] = b; } }
 
-	void set_T(const double d, const int p) { if (T != NULL) { T[p] = d; } }
+	void set_T(const Real& d, const int p) { if (T != NULL) { T[p] = d; } }
 	void add_T_hist(const double d, const int p) { if (T_hist != NULL) { T_hist[p].push_back(d); } }
 	void add_t_hist(const double d, const int p) { if (t_hist != NULL) { t_hist[p].push_back(d); } }
 	
-	void set_T_last(const int p) {if (T_last != NULL) { T_last[p] = T[p]; }}
+	void set_T_last(const int p) {if (T_last != NULL) { T_last[p] = thesis::to_double(T[p]); }}
 	void set_T_last(const double d, const int p) { if (T_last != NULL) { T_last[p] = d; } }
 
 	void set_tSol(const double d, const int p) { if (tSol != NULL) { tSol[p] = d; } }

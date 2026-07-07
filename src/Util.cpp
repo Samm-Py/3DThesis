@@ -137,7 +137,7 @@ void Util::Calc_ScanBounds(Domain& domain, const vector<vector<path_seg>>& paths
 
 void Util::Calc_NonD_dt(vector<Beam>& beams, const Material& material) {
 	for (Beam& beam : beams) {
-		beam.nond_dt = beam.ax * beam.ax / material.a;
+		beam.nond_dt = beam.ax * beam.ax / thesis::to_double(material.a);
 	}
 	return;
 }
@@ -150,8 +150,8 @@ void Util::Calc_RMax (Simdat& sim){
 			if (sim.settings.t_hist < exp(3.0 / 2.0)) { sim.settings.r_max = beam.ax * sqrt(log(sim.settings.t_hist) / 3.0); }
 			else { sim.settings.r_max = beam.ax * pow(sim.settings.t_hist, (1.0 / 3.0)) / sqrt(2.0 * exp(1.0)); }
 			//If the power never gets to x (K/s)
-			double beta = pow(3.0 / 3.14159, 1.5) * beam.q / (sim.material.rho * sim.material.cps);
-			double temp_diff = sim.material.T_liq - sim.material.T_init;
+			double beta = thesis::to_double(pow(3.0 / 3.14159, 1.5) * beam.q / (sim.material.rho * sim.material.cps));
+			double temp_diff = thesis::to_double(sim.material.T_liq - sim.material.T_init);
 			double x = temp_diff * sim.settings.p_hist;
 			double r_max_2;
 			if (beta / (x * beam.ax * beam.ax * beam.ax) < exp(3.0 / 2.0)) { r_max_2 = beam.ax * sqrt(log(beta / (x * beam.ax * beam.ax * beam.ax)) / 3.0); }
@@ -165,7 +165,7 @@ void Util::Calc_RMax (Simdat& sim){
 	return;
 }
 
-bool Util::InRMax(const double x, const double y, const Domain& domain, const Settings& settings) {
+bool Util::InRMax(const Real x, const Real y, const Domain& domain, const Settings& settings) {
 	if ((x > (domain.xmax + settings.r_max)) || (x < (domain.xmin - settings.r_max))) {return false;}
 	else if ((y >(domain.ymax + settings.r_max)) || (y < (domain.ymin - settings.r_max))) {return false; }
 	else {return true;}
@@ -176,10 +176,10 @@ double Util::t0calc(const double t, const Beam& beam, const Material& material, 
 	const double t_hist_t = beam.nond_dt / 12.0*(pow(settings.t_hist, (2.0 / 3.0)) - 1); 
 
 	//Time for beam to never exert more than a fraction (p_hist) of the difference between the preheat and solidus temperature
-	const double beta = pow(3 / 3.14159, 1.5) * beam.q / (material.rho * material.cps);
-	const double temp_diff = material.T_liq - material.T_init;
+	const double beta = thesis::to_double(pow(3 / 3.14159, 1.5) * beam.q / (material.rho * material.cps));
+	const double temp_diff = thesis::to_double(material.T_liq - material.T_init);
 	const double x = temp_diff * settings.p_hist;
-	const double y = 432.0*t*(x*x)*(material.a*material.a*material.a) / (beta*beta);
+	const double y = 432.0*t*(x*x)*thesis::to_double(material.a*material.a*material.a) / (beta*beta);
 	const double p_hist_t = t / ((1.0 + sqrt(y))*(1.0 + sqrt(y)));  
 
 	double t0 = t - max(t_hist_t, p_hist_t);
