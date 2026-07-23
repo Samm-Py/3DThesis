@@ -35,12 +35,6 @@ CASES = {
         ("TriGreedy1X50Y10Z1Zero_fig16_maps.png",
          "TriGreedy1X50Y10Z1Zero"),
     ),
-    "dwell": (
-        ("TriBaselineX50Y10Z1Dwell_fig16_maps.png",
-         "TriBaselineX50Y10Z1Dwell"),
-        ("TriGreedy1X50Y10Z1Dwell_fig16_maps.png",
-         "TriGreedy1X50Y10Z1Dwell"),
-    ),
 }
 
 plt.rcParams.update({
@@ -161,14 +155,10 @@ def make_policy_figure(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--policy", choices=("zero", "dwell", "both"), default="zero",
+        "--policy", choices=tuple(CASES), default="zero",
         help="turnaround policy to compose (default: continuous/zero dwell)")
     args = parser.parse_args()
-    policies = (("zero", "dwell") if args.policy == "both"
-                else (args.policy,))
-    for policy in policies:
-        cases = CASES[policy]
-        make_policy_figure(policy, cases)
+    make_policy_figure(args.policy, CASES[args.policy])
 
 
 if __name__ == "__main__":

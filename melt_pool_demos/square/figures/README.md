@@ -1,25 +1,19 @@
 # Square study figures
 
-The top-level figures are the curated publication set:
+The three paper figures, each as PNG and PDF:
 
-- `square_traces_*` (PNG/PDF): per-line whole-build pool statistics — per
-  scan line, the mean and p5–p95 band of the instantaneous beam-on
-  depth/volume/length, plus a real-time detail strip;
-- `square_profiles_*` (PNG/PDF): the same traces folded by position within
-  each scan line — the clearest view of within-line vs line-to-line variation;
-- `Sq{Zero,Dwell,OptZero,OptDwell}_fig17_traces.png`: melt-pool length /
-  depth / volume vs build time from the RDF event list (paper Fig. 17 style),
-  one per baseline/optimized case, on fixed axes for direct before/after
-  comparison;
-- `Sq{Zero,Dwell,OptZero,OptDwell}_fig16_maps.png`: solidification thermal
-  gradient G — top surface plus centre cross-section (paper Fig. 16 style).
+- `square_traces_zero`: per-line whole-build pool statistics — per scan line,
+  the mean and p5–p95 band of the instantaneous beam-on depth/volume/length,
+  plus a real-time detail strip (`make_greedy_figures.py`);
+- `square_process_parameters`: the optimized power, beam-σ, and scan-velocity
+  histories (`make_greedy_figures.py`);
+- `square_maps_zero`: solidification thermal-gradient G maps — top surface
+  plus centre cross-section — for baseline and optimized
+  (`make_paper_maps.py`).
 
-Supporting visual products are separated into:
+`SqBaselineX50Y10Z1Zero_fig16_maps.png` and
+`SqGreedy1X50Y10Z1Zero_fig16_maps.png` are the individual map panels that
+`make_paper_maps.py` recomposes into `square_maps_zero`.
 
-- `animations/`: baseline/optimized and zero/dwell GIFs;
-- `calibration/`: the developed single-track calibration plot;
-- `diagnostics/`: individual replay plots emitted during post-processing.
-
-All files are regenerable from `make square` (or the individual
-`../common/make_plots.py` commands); the `fig17`/`fig16` views and animations
-additionally require regenerated raw case `Data/`.
+All files are regenerable from `make square`, which also copies the three
+PDFs into `../../paper/figures/`.

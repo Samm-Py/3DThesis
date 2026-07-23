@@ -1,44 +1,36 @@
-# Melt-pool uniformity optimization studies
+# Melt-pool uniformity optimization: paper record
 
-This directory contains the reproducible research workflows accompanying the
-OTI-enabled melt-pool control work in 3DThesis. The controller uses exact
-first-order temperature sensitivities from one OTI simulation to regulate
-melt-pool half-width and depth with per-block absorbed power, lateral beam
-width, and scan velocity during continuous serpentine scanning.
+This directory contains the paper accompanying the OTI-enabled melt-pool
+control work in 3DThesis, together with exactly the workflows and committed
+results that reproduce it. The controller uses exact first-order temperature
+sensitivities from one OTI simulation to regulate melt-pool half-width and
+depth with per-block absorbed power, lateral beam width, and scan velocity
+during continuous serpentine scanning.
 
-The working paper is
-[`raster/doc/paper/main.tex`](raster/doc/paper/main.tex); the fuller
-mathematical and numerical account is
-[`raster/doc/optimization_notes.pdf`](raster/doc/optimization_notes.pdf), with
-source in [`optimization_notes.tex`](raster/doc/optimization_notes.tex).
-Development plans for controls beyond the paper baseline (adaptive dwell,
-trajectory optimization) are kept in [`doc/plans/`](doc/plans/).
+The paper is [`paper/main.tex`](paper/main.tex); its figures live in
+[`paper/figures/`](paper/figures/).
 
-## Study progression
+## Studies
 
-| study | purpose | headline result |
-|---|---|---|
-| [`single_track/`](single_track/) | isolate the effects of power, beam width, and velocity | demonstrates the independent size/shape control authority and calibrates the target pool |
-| [`two_tracks/`](two_tracks/) | isolate one serpentine turnaround and neighboring-track interaction | block-length sweep selects 1 mm blocks; tracked depth 69.4 ± 12.4 to 62.5 ± 6.6 µm |
-| [`raster/`](raster/) | 1 mm proof of the sequential OTI/Newton controller (power + beam width) | width/depth CV: 9.72/7.14% to 0.71/0.59% |
-| [`square/`](square/) | steady 101-line raster at EBM-scale parameters | beam-on depth 106.0 ± 12.7 to 62.2 ± 2.5 µm; pool-volume σ reduced about 19 times |
-| [`triangle/`](triangle/) | shrinking-line geometry matching the publication experiment | beam-on depth 118.7 ± 21.2 to 63.7 ± 4.4 µm; pool-volume σ reduced about 29 times |
+| study | role in the paper |
+|---|---|
+| [`two_tracks/`](two_tracks/) | smallest geometry with a turnaround and neighbouring-track interaction; block-length sweep selects 1 mm blocks (Table 2, Figures 2–4) |
+| [`square/`](square/) | 101-line raster at constant line length (Table 3, Figures 5–7) |
+| [`triangle/`](triangle/) | 87-line raster with shrinking lines (Table 4, Figures 8–10) |
 
-Machinery shared between the square and triangle studies — scan-path
-building, snapshot measurement, the greedy OTI/Newton controller, whole-build
-statistics, and the figure suite — lives in [`common/`](common/); its
-drivers are run from a study directory and follow the working directory
-(`cd square && python optimize_greedy.py --policy zero`). Every study
+Machinery shared between the studies — scan-path building, snapshot
+measurement, the greedy OTI/Newton controller, whole-build statistics, and
+the figure suite — lives in [`common/`](common/); its drivers run from a
+study directory and follow the working directory. `common/` also carries the
+OTI derivative validators (`verify_analytic_derivs.py`,
+`verify_analytic_moving.py`, `validate_dv.py`, `validate_ddwell.py`)
+backing the paper's exact-sensitivity claim. Every study
 follows the same layout:
 
 - geometry-specific drivers and study documentation at the study root;
 - `cases/` for regenerable 3DThesis inputs and raw solver data;
 - `results/` for compact CSV/JSON result tables;
-- `figures/` for publication figures;
-- `logs/` for regenerable execution logs.
-
-Triangle paper-reproduction artifacts that are supporting validation rather
-than controller results live in `triangle/validation/results/`.
+- `figures/` for publication figures.
 
 ## Environment
 
@@ -65,17 +57,17 @@ make build-oti
 make validate
 ```
 
-`make validate` is solver-free. It checks the committed result tables and,
-number by number, the beam-on statistics and two-track block-length sweep
-reported in the paper against the committed replay records, plus the
-existence of every figure the paper includes.
+`make validate` is solver-free. It checks, number by number, the beam-on
+statistics and two-track block-length sweep reported in the paper against
+the committed replay records, plus the existence of every figure the paper
+includes.
 
 The solver locations can be overridden without editing scripts:
 
 ```bash
 THESIS_BIN=/path/to/3DThesis \
 THESIS_BIN_OTI=/path/to/oti/3DThesis \
-make raster
+make square
 ```
 
 MPI is optional and explicit at configure time with
@@ -85,31 +77,18 @@ MPI is optional and explicit at configure time with
 ## Reproduction targets
 
 ```bash
-make raster       # roughly one minute
 make two_tracks   # two-track continuous P/sigma/v case + block-length choice
 make square       # baseline replay + full continuous square study + paper build
 make triangle     # baseline replay + full continuous triangle study + paper build
 make figures      # plots only, using existing compact/full-field results
-make paper        # compile the working paper (main.tex)
-make notes        # compile the technical notes
+make paper        # compile the paper (main.tex)
 ```
 
 The square and triangle studies each drive `run_continuous_study.sh` in the
 study directory: greedy optimization on 1 mm blocks, the 50/10/1 µm tracked
 replay, the figure set, the copy of the three paper PDFs into
-`raster/doc/paper/figures/`, and the LaTeX build.
+`paper/figures/`, and the LaTeX build.
 
-Raw `Data/` directories, build trees, logs, caches, and workflow marker files
-are intentionally ignored. Compact result tables, final figures, documentation,
-and case-generation code are the publication record.
-
-## Current scientific boundary
-
-Power, beam width, and velocity control the two-track, square, and triangle
-geometries well under continuous serpentine scanning; the paper freezes this
-as the baseline. The residual error is concentrated at the triangle apex,
-where short lines inherit neighbouring heat faster than the continuous
-controls can shed it. This motivates the turnaround dwell as an additional
-optimized control — sized by the same OTI sensitivity machinery — which is
-planned in [`doc/plans/DWELL_DERIVATIVE_PLAN.md`](doc/plans/DWELL_DERIVATIVE_PLAN.md)
-and deliberately left out of the publication baseline.
+Raw `Data/` directories, build trees, logs, caches, and snapshot cases are
+intentionally ignored. Compact result tables, final figures, the paper, and
+case-generation code are the publication record.

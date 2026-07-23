@@ -1,46 +1,22 @@
 #!/usr/bin/env python3
-"""Fast, solver-free checks for the publication result tables.
+"""Fast, solver-free checks of the committed results against the paper.
 
-Two layers are checked:
-
-1. the historical per-segment power/sigma record (raster, square, triangle
-   CSV tables) that established the controller;
-2. the paper record (raster/doc/paper/main.tex): the greedy continuous
-   P/sigma/v beam-on statistics for the square and triangle 50/10/1 um
-   replays, the two-track block-length sweep, and the paper figure set.
-
-Every expected number below is exactly a number printed in the paper; the
-tolerance is half a unit in the last reported digit.
+Every expected number below is exactly a number printed in the paper
+(paper/main.tex); the tolerance is half a unit in the last reported digit.
+Checked: the square and triangle beam-on statistics tables, the two-track
+block-length sweep, and the existence of every figure the paper includes.
 """
 
 from __future__ import annotations
 
-import csv
 import decimal
 import json
-import math
 from pathlib import Path
 import sys
 
 
 ROOT = Path(__file__).resolve().parent
-PAPER = ROOT / "raster/doc/paper"
-
-
-def rows(path: Path):
-    with path.open(newline="") as handle:
-        return list(csv.DictReader(handle))
-
-
-def values(table, column):
-    return [float(row[column]) for row in table]
-
-
-def cv(table, column):
-    data = values(table, column)
-    mean = sum(data) / len(data)
-    variance = sum((x - mean) ** 2 for x in data) / len(data)
-    return 100.0 * math.sqrt(variance) / mean
+PAPER = ROOT / "paper"
 
 
 def require(condition, message):
@@ -60,21 +36,6 @@ def require_reported(label, actual, reported):
             f"paper's {reported}")
 
 
-def check_pair(label, base_path, optimized_path, expected_rows, max_cv):
-    base = rows(base_path)
-    optimized = rows(optimized_path)
-    require(len(base) == expected_rows, f"{label}: baseline has {len(base)} rows")
-    require(len(optimized) == expected_rows,
-            f"{label}: optimized has {len(optimized)} rows")
-    bw, bd = cv(base, "w"), cv(base, "d")
-    ow, od = cv(optimized, "w"), cv(optimized, "d")
-    require(ow < bw and od < bd, f"{label}: optimization did not reduce both CVs")
-    require(ow <= max_cv[0] and od <= max_cv[1],
-            f"{label}: optimized CV {ow:.2f}/{od:.2f}% exceeds tolerance")
-    print(f"PASS {label:22s} rows={expected_rows:3d}  CV w/d "
-          f"{bw:6.2f}/{bd:6.2f}% -> {ow:6.2f}/{od:6.2f}%")
-
-
 def beam_on(path: Path):
     with path.open() as handle:
         return json.load(handle)["beam_on"]
@@ -92,7 +53,7 @@ def check_paper_stats(label, path, depth, width_um, volume):
                      stats["volume_mm3"]["mean"], volume[0])
     require_reported(f"{label} volume std",
                      stats["volume_mm3"]["std"], volume[1])
-    print(f"PASS {label:22s} depth {depth[0]} +/- {depth[1]} um, "
+    print(f"PASS {label:18s} depth {depth[0]} +/- {depth[1]} um, "
           f"width {width_um[0]} +/- {width_um[1]} um, "
           f"volume {volume[0]} +/- {volume[1]} mm^3")
 
@@ -142,14 +103,11 @@ def check_paper_artifacts():
                 PAPER / "references.bib"]
     required += [PAPER / "figures" / name for name in figures]
     required += [
-        ROOT / "raster/results/min_dwell.json",
-        ROOT / "square/results/min_dwell.json",
         ROOT / "square/results/calibration/CalTrack_calibration.json",
+        ROOT / "square/results/target_zero.json",
         ROOT / "square/results/greedy_1_zero.json",
+        ROOT / "triangle/results/target_zero.json",
         ROOT / "triangle/results/greedy_1_zero.json",
-        ROOT / "triangle/results/min_dwell.json",
-        ROOT / "raster/doc/optimization_notes.pdf",
-        ROOT / "raster/figures/raster_dims.png",
         ROOT / "square/figures/square_traces_zero.png",
         ROOT / "triangle/figures/triangle_traces_zero.png",
     ]
@@ -160,60 +118,23 @@ def check_paper_artifacts():
 
 
 def main():
-    # -- historical per-segment power/sigma record -------------------------
-    check_pair(
-        "raster",
-        ROOT / "raster/results/baseline.csv",
-        ROOT / "raster/results/optimized.csv",
-        14,
-        (1.0, 1.0),
-    )
-    for policy in ("dwell", "zero"):
-        check_pair(
-            f"square/{policy}",
-            ROOT / f"square/results/baseline_{policy}.csv",
-            ROOT / f"square/results/optimized_{policy}.csv",
-            202,
-            (0.5, 0.5),
-        )
-    check_pair(
-        "triangle/dwell",
-        ROOT / "triangle/results/baseline_dwell.csv",
-        ROOT / "triangle/results/optimized_dwell.csv",
-        131,
-        (1.0, 4.0),
-    )
-    check_pair(
-        "triangle/zero",
-        ROOT / "triangle/results/baseline_zero.csv",
-        ROOT / "triangle/results/optimized_zero.csv",
-        131,
-        (5.0, 3.0),
-    )
-
-    with (ROOT / "triangle/results/min_dwell.json").open() as handle:
-        triangle_dwell = json.load(handle)
-    require(triangle_dwell["binding_turn"] == 79,
-            "triangle minimal-dwell binding turn changed")
-
-    # -- paper record: greedy continuous P/sigma/v -------------------------
     check_paper_stats(
-        "paper square baseline",
+        "square baseline",
         "square/results/fullfield/SqBaselineX50Y10Z1Zero_fullfield.json",
         depth=("106.0", "12.7"), width_um=("388", "27"),
         volume=("0.0798", "0.0240"))
     check_paper_stats(
-        "paper square optimized",
+        "square optimized",
         "square/results/fullfield/SqGreedy1X50Y10Z1Zero_fullfield.json",
         depth=("62.2", "2.5"), width_um=("323", "9.9"),
         volume=("0.01293", "0.00127"))
     check_paper_stats(
-        "paper triangle baseline",
+        "triangle baseline",
         "triangle/results/fullfield/TriBaselineX50Y10Z1Zero_fullfield.json",
         depth=("118.7", "21.2"), width_um=("484", "170"),
         volume=("0.11274", "0.04715"))
     check_paper_stats(
-        "paper triangle optimized",
+        "triangle optimized",
         "triangle/results/fullfield/TriGreedy1X50Y10Z1Zero_fullfield.json",
         depth=("63.7", "4.4"), width_um=("329", "15"),
         volume=("0.01176", "0.00160"))

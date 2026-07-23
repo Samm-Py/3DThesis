@@ -34,12 +34,6 @@ CASES = {
         ("SqGreedy1X50Y10Z1Zero_fig16_maps.png",
          "SqGreedy1X50Y10Z1Zero"),
     ),
-    "dwell": (
-        ("SqBaselineX50Y10Z1Dwell_fig16_maps.png",
-         "SqBaselineX50Y10Z1Dwell"),
-        ("SqGreedy1X50Y10Z1Dwell_fig16_maps.png",
-         "SqGreedy1X50Y10Z1Dwell"),
-    ),
 }
 
 plt.rcParams.update({
@@ -150,8 +144,12 @@ def make_policy_figure(
 
 
 def main() -> None:
-    for policy, cases in CASES.items():
-        make_policy_figure(policy, cases)
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--policy", choices=tuple(CASES), default="zero")
+    args = parser.parse_args()
+    make_policy_figure(args.policy, CASES[args.policy])
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-PAPER="$HERE/../raster/doc/paper"
+PAPER="$HERE/../paper"
 PYTHON_BIN=${PYTHON_BIN:-python}
 
 cd "$HERE"

@@ -31,8 +31,8 @@ __pycache__/
 *.fdb_latexmk
 *.synctex.gz
 
-# Overleaf upload bundle (regenerable from raster/doc/paper/)
-/melt_pool_demos/raster/doc/paper.zip
+# Overleaf upload bundle (regenerable from melt_pool_demos/paper/)
+/melt_pool_demos/paper/paper.zip
 
 # Editor / OS noise
 .DS_Store

@@ -6,6 +6,5 @@ baseline and selected `P/sigma/v` replay:
 - `case_baseline_hires_continuous`;
 - `case_greedy1prevcool_hires_continuous`.
 
-Other retained directories support the original block-length and grid
-convergence checks. Their large `Data/` directories are reproducible and are
-ignored by Git.
+The block-length sweep schedules are replayed through these same two cases;
+their large `Data/` directories are reproducible and are ignored by Git.

@@ -425,11 +425,13 @@ def main() -> None:
             print(f"{policy} figures pending optimized schedule/replay")
     if not data:
         raise RuntimeError("no completed greedy raster replay found")
-    comparison_figure(data)
+    # Paper figure set only: the P/sigma/v control history, the per-line
+    # beam-on traces, and the Fig. 16 map panels (recomposed by
+    # make_paper_maps.py). The comparison and within-line profile figures are
+    # not used by the paper.
     controls_figure(data)
     for policy, cfg in data.items():
         traces_figure(policy, cfg)
-        profiles_figure(policy, cfg)
     if not args.skip_maps:
         maps(data)
 

@@ -1,12 +1,12 @@
 """Shared machinery for the melt-pool uniformity optimization demos
 (square/ and triangle/) at the Stump & Plotkowski Sec. 3.5 calibrated
 physics. The drivers in this directory are run FROM a demo directory
-(``cd square && python ../common/run_optimized.py zero``); the geometry,
+(``cd square && python optimize_greedy.py --policy zero``); the geometry,
 snapshot case, and measurement box follow the working directory and can be
 overridden with MP_GEOM / MP_CASE_DIR / MP_BOX_BEHIND / MP_BOX_HALF_Y.
 
-Mirrors melt_pool_demos/raster/raster_lib.py but self-contained: its own
-snapshot case directory (cases/snapcase/), IN718 material written
+Self-contained: its own snapshot case directory (cases/snapcase/),
+IN718 material written
 explicitly, isovalue 1610 K, and a merged-pool-sized measurement box. The
 path builder reproduces make_case.py's rows exactly so the optimizer
 controls the same process the baselines ran.
