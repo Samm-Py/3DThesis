@@ -54,7 +54,7 @@ namespace Util {
 	// Calculates bounds of scan path
 	void	Calc_ScanBounds(Domain&, const vector<vector<path_seg>>&);
 	// Calculates the nondimensional integration time
-	void	Calc_NonD_dt(vector<Beam>&, const Material&);
+	void	Calc_NonD_dt(vector<Beam>&, const Material&, const double);
 	// Calculates the maximum radius around the domain to be considered
 	void	Calc_RMax(Simdat&);
 

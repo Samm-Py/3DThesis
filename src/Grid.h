@@ -161,8 +161,8 @@ public:
 			static const std::pair<const char*, int> oti_cols[] = {
 				{"dT_dx",   thesis::DV_X},   {"dT_dy",   thesis::DV_Y},
 				{"dT_dz",   thesis::DV_Z},   {"dT_dQ",   thesis::DV_Q},
-				{"dT_dkon", thesis::DV_KON}, {"dT_drho", thesis::DV_RHO},
-				{"dT_dcps", thesis::DV_CPS},
+				{"dT_dsig", thesis::DV_SIG}, {"dT_dv",   thesis::DV_V},
+				{"dT_ddwell", thesis::DV_DWELL},
 			};
 			for (const auto& col : oti_cols) {
 				const int dv = col.second;

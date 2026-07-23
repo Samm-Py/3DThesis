@@ -31,6 +31,7 @@ using std::list;
 // beam-power derivatives.
 struct int_seg {
 	Real xb, yb, zb, phix, phiy, phiz, dtau, qmod;
+	double wmod = 1.0; // lateral beam width factor of the source segment
 };
 
 // What is used to integrate
@@ -49,6 +50,8 @@ struct path_seg{
 	double sx, sy, sz;	//Segment end coordinates
 	double sqmod;		//Segment power modulation
 	double sparam;		//Segment time parameter (speed | spot time )
+	double swidth = 1.0;//Segment lateral beam width factor (multiplies beam ax/ay;
+	                    //optional 7th path column, 1.0 when absent)
 	double seg_time;	//Segment end time
 };
 
@@ -82,7 +85,8 @@ struct Material {
 // Beam specific parameters. Power q is a Real design variable; beam shape and
 // the adaptive nondimensional timestep stay double.
 struct Beam {
-	double ax, ay, az; // Beam Shape
+	Real ax, ay;       // Lateral beam widths: Real so dT/d(sigma) propagates (DV_SIG)
+	double az;         // Depth/absorption sigma: fixed material property, not a control
 	double eff; // Absoprtion Efficiency
 	Real q; // Beam Power
 	double nond_dt; // Nondimensional Time
@@ -148,14 +152,26 @@ struct Settings {
 	int thnum;
 	bool use_PINT;
 
+	// OTI seed segment: 0-based Path.txt DATA-row index (header excluded; the
+	// solver's internal path prepends an origin spot, handled in seed_ctx) of
+	// the segment whose controls (Q, sigma, v) carry the derivative seeds.
+	// -1 (default) = the LAST segment, the pre-existing behavior. A
+	// non-default value enables "seed segment j, observe at scan end" for
+	// cross-segment influence Jacobians; incompatible with path compression
+	// (combined far-history nodes cannot be zone-classified against a middle
+	// seed), which Init enforces.
+	int seed_seg;
+
 	// MPI
 	bool mpi_overlap;
 };
 
 // Some utility variables
-struct Utility { 
+struct Utility {
 	double allScansEndTime = 0;		// Time when all scans are done
 	double approxEndTime = 0;		// Approximate end time to simulation
+	double maxWidthMod = 1.0;		// Max per-segment beam width factor over all
+									// paths; sizes conservative radii (r_max, melt search)
 	bool sol_finish = false;				// Has solidification finished
 	bool do_sol = false;					// Do solidification calculation
 };

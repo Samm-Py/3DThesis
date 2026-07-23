@@ -18,6 +18,106 @@
 #include <iostream>
 #include <fstream>
 
+namespace {
+// Generalized design-variable seeding: "seed segment j, observe at time t".
+// The seeded segment defaults to the LAST path segment (settings.seed_seg = -1,
+// the pre-existing behavior: the optimizer's current segment). A non-default
+// seed_seg selects a HISTORY segment instead, giving cross-segment influence
+// derivatives dT/d(v_j, Q_j, sigma_j) for the coupled trajectory Jacobian.
+//
+// Velocity model (fixed path geometry): changing segment j's scan speed v_j
+// changes only its duration dt = L/v. With the observation at a fixed path
+// fraction (scan end), a quadrature node deposited at tp sees three zones:
+//   before segment j : observation shifts by t_shift        tau = tau_d + t_shift
+//   inside segment j : stretches with the segment duration  tau = tau_after + (t_end - tp)*k
+//                      (observation inside j itself: pure scaling tau_d * k)
+//   after  segment j : deposition and observation shift together -> tau_d
+// where k = dt_oti/dt (real part exactly 1) and t_shift = dt_oti - dt (real
+// part exactly 0). For j = last these reduce bit-for-bit to the validated
+// current-segment rule. Beam positions are v-independent (fixed geometry).
+// In the plain-double build everything here is compiled out and conduction
+// times are identically t - tp, so that build stays byte-identical.
+struct SeedCtx {
+	int seg = -1;           // resolved path-row index of the seeded segment
+	bool vel = false;       // velocity seeding active for this path/time
+	double t_end = 0.0;     // path[seg].seg_time
+	double tau_after = 0.0; // t - t_end (> 0 only when observing past segment seg)
+	Real k = 1.0;           // dt_oti / dt
+	Real t_shift = 0.0;     // dt_oti - dt
+	bool dwell = false;     // seeded row is a beam-off dwell (t_shift channel only)
+};
+
+SeedCtx seed_ctx(const vector<path_seg>& path, const int seed_seg, const double t) {
+	SeedCtx ctx;
+	const int last = static_cast<int>(path.size()) - 1;
+	// settings.seed_seg is a 0-based Path.txt DATA row (header excluded);
+	// FileRead_Path prepends an implicit origin spot at path[0], so file row r
+	// is path[r+1]. Out-of-range requests resolve to the default (last); the
+	// Python drivers assert the seeded segment survives path truncation.
+	const int req = (seed_seg >= 0) ? seed_seg + 1 : -1;
+	ctx.seg = (req >= 1 && req <= last) ? req : last;
+#ifdef THESIS_ENABLE_OTI
+	const int js = ctx.seg;
+	// Velocity needs a powered line move the observation has reached; a
+	// segment entirely in the future cannot shift the observation time.
+	if (js >= 1 && !path[js].smode && t > path[js - 1].seg_time) {
+		const double dxk = path[js].sx - path[js - 1].sx;
+		const double dyk = path[js].sy - path[js - 1].sy;
+		const double dzk = path[js].sz - path[js - 1].sz;
+		const double Lk = sqrt(dxk * dxk + dyk * dyk + dzk * dzk);
+		const double dt_cur = path[js].seg_time - path[js - 1].seg_time;
+		if (Lk > 0.0 && dt_cur > 0.0) {
+			const double v_real = Lk / dt_cur;
+			const Real dt_oti = Lk / thesis::seed(thesis::DV_V, v_real);
+			ctx.k = dt_oti / dt_cur;          // real part 1.0
+			ctx.t_shift = dt_oti - dt_cur;    // real part 0.0
+			ctx.t_end = path[js].seg_time;
+			ctx.tau_after = t - ctx.t_end;
+			ctx.vel = true;
+		}
+	}
+	// Dwell derivative: a beam-off spot row's DURATION is the control. Beam off
+	// => no nodes on this segment (culled by qmod>0), so the stretch and weight
+	// channels vanish and ONLY dv_tau's earlier-node history shift survives.
+	// Mutually exclusive with the velocity branch by row type (smode). Strict
+	// t > seg_time[js]: a query INSIDE the pause cannot depend on its total
+	// length, so dT_ddwell = 0 there.
+	else if (js >= 1 && path[js].smode && path[js].sqmod == 0.0
+	         && t > path[js].seg_time) {
+		const double Delta = path[js].seg_time - path[js - 1].seg_time;
+		if (Delta >= 0.0) {
+			const Real dt_oti = thesis::seed(thesis::DV_DWELL, Delta);
+			ctx.t_shift = dt_oti - Delta;    // real part 0.0, d/dDelta = 1
+			ctx.t_end   = path[js].seg_time;
+			ctx.vel     = true;              // enable dv_tau's history shift
+			ctx.dwell   = true;              // suppress Q/SIG seeds (beam-off seg)
+		}
+	}
+#else
+	(void)t;
+#endif
+	return ctx;
+}
+
+// Conduction time of a quadrature node deposited at tp on path segment `seg`,
+// observed at t, under the three-zone rule above.
+inline Real dv_tau(const SeedCtx& ctx, const int seg, const double t, const double tp) {
+#ifdef THESIS_ENABLE_OTI
+	if (ctx.vel) {
+		if (seg == ctx.seg) {
+			// Observation past the segment: its trailing part (t_end - tp)
+			// stretches, the beam-off remainder tau_after is fixed. At the
+			// end-of-scan snapshot tau_after == 0 and this is (t - tp) * k.
+			return (ctx.tau_after > 0.0) ? ctx.tau_after + (ctx.t_end - tp) * ctx.k
+			                             : (t - tp) * ctx.k;
+		}
+		if (seg < ctx.seg) { return (t - tp) + ctx.t_shift; }
+	}
+#endif
+	return t - tp;
+}
+} // namespace
+
 void Calc::Integrate_Parallel(Nodes& nodes, const Simdat& sim, const double t, const bool isSol) {
 	const int numThreads = sim.settings.thnum;
 	static vector<Nodes> nodes_par;
@@ -95,11 +195,16 @@ void Calc::GaussIntegrate(Nodes& nodes, const Simdat& sim, const double t, const
 		// Get beta for beam
 		const Real beta = pow(3.0 / PI, 1.5) * beam.q / (sim.material.rho * sim.material.cps);
 
+		// Design-variable seeding context: which segment carries the Q/sigma/v
+		// seeds (default: last = the optimizer's current segment) and the
+		// velocity three-zone quantities. See the note at the top of the file.
+		const SeedCtx ctx = seed_ctx(path, sim.settings.seed_seg, t);
+
 		// Keep incrementing up if t is greater than the end of the path segment but also below the end time of the scan
 		while ((t > path[seg_temp].seg_time) && (seg_temp + 1 < path.size())) { seg_temp++; }
 		// Keep incrementing down if t is less than end of previous path segment
 		while ((t < path[seg_temp - 1].seg_time) && (seg_temp - 1 > 0)) { seg_temp--; }
-		
+
 		// If not solidifying, then make this the start next time the function is run
 		if (!isSol) {start_seg[i] = seg_temp;}
 
@@ -123,9 +228,23 @@ void Calc::GaussIntegrate(Nodes& nodes, const Simdat& sim, const double t, const
 
 		// Make 1st segment at the exact time
 		// Used for instantaneous heat source additon to laplacian
-		int_seg current_beam = Util::GetBeamLoc(t, seg_temp, path, sim); 
-		current_beam.phix = (beam.ax * beam.ax + 0.0);
-		current_beam.phiy = (beam.ay * beam.ay + 0.0);
+		int_seg current_beam = Util::GetBeamLoc(t, seg_temp, path, sim);
+		{
+			Real axw = beam.ax * current_beam.wmod;
+			Real ayw = beam.ay * current_beam.wmod;
+			// The SEEDED path segment's effective width and power are the
+			// design variables: dT_dsig/dT_dQ are exact per-segment control
+			// derivatives. All other segments carry zero derivative.
+			if (seg_temp == ctx.seg && !ctx.dwell) {
+				axw = thesis::seed(thesis::DV_SIG, thesis::to_double(axw));
+				ayw = thesis::seed(thesis::DV_SIG, thesis::to_double(ayw));
+				current_beam.qmod = thesis::seed(thesis::DV_Q,
+					thesis::to_double(beam.q * current_beam.qmod) / (2.0 * beam.eff))
+					* (2.0 * beam.eff) / beam.q; // dT_dQ is per INPUT watt (q holds 2*eff*P_in)
+			}
+			current_beam.phix = (axw * axw + 0.0);
+			current_beam.phiy = (ayw * ayw + 0.0);
+		}
 		current_beam.phiz = (beam.az * beam.az + 0.0);
 		current_beam.qmod *= beta;
 		current_beam.dtau = 0.0;
@@ -173,18 +292,34 @@ void Calc::GaussIntegrate(Nodes& nodes, const Simdat& sim, const double t, const
 			}
 
 			//Add Quadrature Points
-			double tau; Real ct;
+			Real tau; Real ct;
 			for (int a = (2 * curOrder - 3); a > (curOrder - 3); a--) {
 				double tp = 0.5 * ((t2 - t1) * locs[a] + (t2 + t1));
-				tau = t - tp;
+				const bool seeded_seg = (seg_temp == ctx.seg);
+				// DV_V three-zone conduction time (see dv_tau).
+				tau = dv_tau(ctx, seg_temp, t, tp);
 				ct = 12.0 * sim.material.a * tau;
 
 				current_beam = Util::GetBeamLoc(tp, seg_temp, path, sim);
-				current_beam.phix = (beam.ax * beam.ax + ct);
-				current_beam.phiy = (beam.ay * beam.ay + ct);
+				Real axw = beam.ax * current_beam.wmod;
+				Real ayw = beam.ay * current_beam.wmod;
+				// Seed the seeded segment's controls (see note at the
+				// instantaneous node above).
+				if (seeded_seg && !ctx.dwell) {
+					axw = thesis::seed(thesis::DV_SIG, thesis::to_double(axw));
+					ayw = thesis::seed(thesis::DV_SIG, thesis::to_double(ayw));
+					current_beam.qmod = thesis::seed(thesis::DV_Q,
+						thesis::to_double(beam.q * current_beam.qmod) / (2.0 * beam.eff))
+						* (2.0 * beam.eff) / beam.q; // dT_dQ is per INPUT watt (q holds 2*eff*P_in)
+				}
+				current_beam.phix = (axw * axw + ct);
+				current_beam.phiy = (ayw * ayw + ct);
 				current_beam.phiz = (beam.az * beam.az + ct);
 				current_beam.qmod *= beta;
 				current_beam.dtau = 0.5 * (t2 - t1) * weights[a];
+				// DV_V weight channel: the seeded segment's quadrature weights
+				// scale with its duration.
+				if (ctx.vel && seeded_seg && !ctx.dwell) { current_beam.dtau = current_beam.dtau * ctx.k; }
 
 				if (current_beam.qmod > 0.0 && current_beam.dtau > 0.0) { Util::AddToNodes(nodes, current_beam); }
 			}
@@ -241,6 +376,10 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 		// Get beta for beam
 		const Real beta = pow(3.0 / PI, 1.5) * beam.q / (sim.material.rho * sim.material.cps);
 
+		// Design-variable seeding context (see the note in GaussIntegrate).
+		// Non-default seed segments are refused with compression at Init.
+		const SeedCtx ctx = seed_ctx(path, sim.settings.seed_seg, t);
+
 		// Keep incrementing up if t is greater than the end of the path segment but also below the end time of the scan
 		while ((t > path[seg_temp].seg_time) && (seg_temp + 1 < path.size())) { seg_temp++; }
 		// Keep incrementing down if t is less than end of previous path segment
@@ -270,8 +409,20 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 		// Make 1st segment at the exact time
 		// Used for instantaneous heat source additon to laplacian
 		int_seg current_beam = Util::GetBeamLoc(t, seg_temp, path, sim);
-		current_beam.phix = (beam.ax * beam.ax + 0.0);
-		current_beam.phiy = (beam.ay * beam.ay + 0.0);
+		{
+			Real axw = beam.ax * current_beam.wmod;
+			Real ayw = beam.ay * current_beam.wmod;
+			// Seed the seeded segment's controls (see GaussIntegrate).
+			if (seg_temp == ctx.seg && !ctx.dwell) {
+				axw = thesis::seed(thesis::DV_SIG, thesis::to_double(axw));
+				ayw = thesis::seed(thesis::DV_SIG, thesis::to_double(ayw));
+				current_beam.qmod = thesis::seed(thesis::DV_Q,
+					thesis::to_double(beam.q * current_beam.qmod) / (2.0 * beam.eff))
+					* (2.0 * beam.eff) / beam.q; // dT_dQ is per INPUT watt (q holds 2*eff*P_in)
+			}
+			current_beam.phix = (axw * axw + 0.0);
+			current_beam.phiy = (ayw * ayw + 0.0);
+		}
 		current_beam.phiz = (beam.az * beam.az + 0.0);
 		current_beam.qmod *= beta;
 		current_beam.dtau = 0.0;
@@ -298,7 +449,7 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 
 			//Compression variables
 			double r2, dist2, xp, yp, xs, ys, dx, dy, ts, dt;
-			double sum_t = 0, sum_qmodt = 0, sum_qmodtx = 0, sum_qmodty = 0; //sums of t, qmod*t, qmod*t*x,... to find centers
+			double sum_t = 0, sum_qmodt = 0, sum_qmodtx = 0, sum_qmodty = 0, sum_qmodtw = 0; //sums of t, qmod*t, qmod*t*x,... to find centers (w = width factor)
 			int seg_temp_2;
 			int num_comb_segs = 0; //number of segments to be combined
 
@@ -336,7 +487,8 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 			yp = thesis::to_double(current_beam_t2.yb);
 
 			// Diffusion Distance Squared (Distance it diffused by *some amount*, squared)
-			r2 = log(2.0) / 8.0 * (beam.ax * beam.ax) * (12.0 * (t - t2) * thesis::to_double(sim.material.a) / (beam.ax * beam.ax) + 1.0);
+			const double axw2 = thesis::to_double(beam.ax * beam.ax) * sim.util.maxWidthMod * sim.util.maxWidthMod;
+			r2 = log(2.0) / 8.0 * axw2 * (12.0 * (t - t2) * thesis::to_double(sim.material.a) / axw2 + 1.0);
 
 			seg_temp_2 = seg_temp;
 
@@ -376,6 +528,7 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 							sum_qmodtx += path[seg_temp_2].sx * path[seg_temp_2].sqmod * (t1 - ts);
 							sum_qmodty += path[seg_temp_2].sy * path[seg_temp_2].sqmod * (t1 - ts);
 							sum_qmodt += path[seg_temp_2].sqmod * (t1 - ts);
+							sum_qmodtw += path[seg_temp_2].swidth * path[seg_temp_2].sqmod * (t1 - ts);
 							sum_t += (t1 - ts);
 							t1 = ts;
 						}
@@ -390,6 +543,7 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 							sum_qmodtx += (xs + dx * ((t1 + t_int) / 2.0 - ts) / dt) * path[seg_temp_2].sqmod * (t1 - t_int);
 							sum_qmodty += (ys + dy * ((t1 + t_int) / 2.0 - ts) / dt) * path[seg_temp_2].sqmod * (t1 - t_int);
 							sum_qmodt += path[seg_temp_2].sqmod * (t1 - t_int);
+							sum_qmodtw += path[seg_temp_2].swidth * path[seg_temp_2].sqmod * (t1 - t_int);
 							sum_t += (t1 - t_int);
 							t1 = t_int;
 						}
@@ -415,6 +569,7 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 							sum_qmodtx += path[seg_temp_2].sx * path[seg_temp_2].sqmod * dt;
 							sum_qmodty += path[seg_temp_2].sy * path[seg_temp_2].sqmod * dt;
 							sum_qmodt += path[seg_temp_2].sqmod * dt;
+							sum_qmodtw += path[seg_temp_2].swidth * path[seg_temp_2].sqmod * dt;
 							sum_t += dt;
 						}
 						else {
@@ -425,6 +580,7 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 							sum_qmodtx += (xs + dx * ((path[seg_temp_2].seg_time + t1) / 2.0 - ts) / dt) * path[seg_temp_2].sqmod * dt;
 							sum_qmodty += (ys + dy * ((path[seg_temp_2].seg_time + t1) / 2.0 - ts) / dt) * path[seg_temp_2].sqmod * dt;
 							sum_qmodt += path[seg_temp_2].sqmod * dt;
+							sum_qmodtw += path[seg_temp_2].swidth * path[seg_temp_2].sqmod * dt;
 							sum_t += dt;
 						}
 					}
@@ -443,20 +599,29 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 			}
 
 			//Add Quadrature Points using the same average for x, y, and qmod (CAN BE IMPROVED)
-			double tau; Real ct;
+			Real tau; Real ct;
 			if (num_comb_segs) {
 				int_seg current_beam;
 				if (sum_qmodt > 0.0) {
 					current_beam.xb = sum_qmodtx / sum_qmodt;
 					current_beam.yb = sum_qmodty / sum_qmodt;
-					current_beam.qmod = sum_qmodt / sum_t;		
+					current_beam.qmod = sum_qmodt / sum_t;
+					// power-weighted average width factor of the combined segments.
+					// Combined nodes aggregate FAR history only, so they are
+					// (correctly) not seeded with the seeded-segment DVs; they
+					// still see the DV_V scan-end observation shift t_shift.
+					// (Middle-segment seeds cannot be zone-classified here,
+					// which is why Init refuses SeedSegment with compression.)
+					current_beam.wmod = sum_qmodtw / sum_qmodt;
+					const Real axw = beam.ax * current_beam.wmod;
+					const Real ayw = beam.ay * current_beam.wmod;
 					for (int a = (2 * curOrder - 3); a > (curOrder - 3); a--) {
 						double tp = 0.5 * ((t2 - t1) * locs[a] + (t2 + t1));
-						tau = t - tp;
+						tau = (t - tp) + ctx.t_shift;
 						ct = 12.0 * sim.material.a * tau;
 
-						current_beam.phix = (beam.ax * beam.ax + ct);
-						current_beam.phiy = (beam.ay * beam.ay + ct);
+						current_beam.phix = (axw * axw + ct);
+						current_beam.phiy = (ayw * ayw + ct);
 						current_beam.phiz = (beam.az * beam.az + ct);
 						current_beam.qmod *= beta;
 						current_beam.dtau = 0.5 * (t2 - t1) * weights[a];
@@ -468,16 +633,29 @@ void Calc::GaussCompressIntegrate(Nodes& nodes, const Simdat& sim, const double 
 			//Add Quadrature Points
 			else {
 				for (int a = (2 * curOrder - 3); a > (curOrder - 3); a--) {
-					double tp = 0.5 * ((t2 - t1) * locs[a] + (t2 + t1));	
-					tau = t - tp;
+					double tp = 0.5 * ((t2 - t1) * locs[a] + (t2 + t1));
+					const bool seeded_seg = (seg_temp == ctx.seg);
+					// DV_V three-zone conduction time (see dv_tau).
+					tau = dv_tau(ctx, seg_temp, t, tp);
 					ct = 12.0 * sim.material.a * tau;
 
 					int_seg current_beam = Util::GetBeamLoc(tp, seg_temp, path, sim);
-					current_beam.phix = (beam.ax * beam.ax + ct);
-					current_beam.phiy = (beam.ay * beam.ay + ct);
+					Real axw = beam.ax * current_beam.wmod;
+					Real ayw = beam.ay * current_beam.wmod;
+					// Seed the seeded segment's controls (see GaussIntegrate).
+					if (seeded_seg && !ctx.dwell) {
+						axw = thesis::seed(thesis::DV_SIG, thesis::to_double(axw));
+						ayw = thesis::seed(thesis::DV_SIG, thesis::to_double(ayw));
+						current_beam.qmod = thesis::seed(thesis::DV_Q,
+							thesis::to_double(beam.q * current_beam.qmod) / (2.0 * beam.eff))
+							* (2.0 * beam.eff) / beam.q; // dT_dQ is per INPUT watt (q holds 2*eff*P_in)
+					}
+					current_beam.phix = (axw * axw + ct);
+					current_beam.phiy = (ayw * ayw + ct);
 					current_beam.phiz = (beam.az * beam.az + ct);
 					current_beam.qmod *= beta;
 					current_beam.dtau = 0.5 * (t2 - t1) * weights[a];
+					if (ctx.vel && seeded_seg && !ctx.dwell) { current_beam.dtau = current_beam.dtau * ctx.k; }
 					if ((current_beam.qmod > 0.0) && (current_beam.dtau > 0.0)) { Util::AddToNodes(nodes, current_beam); }
 				}
 			}

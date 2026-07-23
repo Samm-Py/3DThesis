@@ -4,6 +4,14 @@ Heat transfer code utilizing a nondimensionalized semi-analytic solution to movi
 
 A detailed explanation of the mathematics can be found in [Stump and Plotkowski](CITATION.bib).
 
+## OTI melt-pool optimization research
+
+This branch adds optional order-truncated-imaginary (OTI) automatic
+differentiation and publication workflows for per-segment melt-pool uniformity
+control. The study overview, dependencies, reproduction targets, compact result
+tables, and technical notes are collected in
+[`melt_pool_demos/`](melt_pool_demos/README.md).
+
 ## Citing
 
 If you use 3dThesis in your work, please cite the [Stump and Plotkowski](CITATION.bib).
@@ -21,7 +29,12 @@ The original release is available on [DOE Code](https://doi.org/10.11578/dc.2020
 
 ## Build
 
-3dThesis requires a C++ compiler and OpenMP for on-node parallelism. 3dThesis will optionally use MPI if available on the system.
+3dThesis requires a C++ compiler and OpenMP for on-node parallelism. MPI and
+OTI are independently selectable CMake features:
+
+- `-DTHESIS_ENABLE_MPI=ON/OFF`
+- `-DTHESIS_ENABLE_OTI=ON/OFF`
+- `-DTHESIS_OTI_INCLUDE_DIR=/path/to/cpp_oti_lib/include`
 
 3dThesis primarily support CMake builds. A minimal example build and install looks like:
 
