@@ -1,0 +1,71 @@
+{
+  "policy": "continuous",
+  "method": "sequential greedy endpoint regulation only",
+  "segment_mm": 5.0,
+  "target": {
+    "width_um": 163.84201049804685,
+    "depth_um": 63.33677291870117
+  },
+  "oti_runs": 6,
+  "double_runs": 2,
+  "history": [
+    {
+      "block": "line2_block1",
+      "iteration": 1,
+      "alpha": 1.0,
+      "merit": 0.00010177123781667479,
+      "worst_relative_error": 0.010302047487555397,
+      "pmod": 0.8394142495611565,
+      "sigma": 0.00020004501219125166,
+      "velocity": 3.290845768603418
+    },
+    {
+      "block": "line2_block2",
+      "iteration": 1,
+      "alpha": 1.0,
+      "merit": 3.26525564856591e-05,
+      "worst_relative_error": 0.004722329581701368,
+      "pmod": 0.9263513162377376,
+      "sigma": 0.00020193562961331893,
+      "velocity": 3.1378369895700406
+    }
+  ],
+  "schedule": [
+    {
+      "segment": 1,
+      "line": 1,
+      "end_x_mm": 5.0,
+      "end_y_mm": 0.0,
+      "power_w": 150.0,
+      "sigma_um": 200.0,
+      "velocity_m_per_s": 3.0
+    },
+    {
+      "segment": 2,
+      "line": 1,
+      "end_x_mm": 10.0,
+      "end_y_mm": 0.0,
+      "power_w": 150.0,
+      "sigma_um": 200.0,
+      "velocity_m_per_s": 3.0
+    },
+    {
+      "segment": 3,
+      "line": 2,
+      "end_x_mm": 5.0,
+      "end_y_mm": 0.1,
+      "power_w": 125.91213743417347,
+      "sigma_um": 200.04501219125166,
+      "velocity_m_per_s": 3.290845768603418
+    },
+    {
+      "segment": 4,
+      "line": 2,
+      "end_x_mm": 0.0,
+      "end_y_mm": 0.1,
+      "power_w": 138.95269743566064,
+      "sigma_um": 201.93562961331892,
+      "velocity_m_per_s": 3.1378369895700406
+    }
+  ]
+}

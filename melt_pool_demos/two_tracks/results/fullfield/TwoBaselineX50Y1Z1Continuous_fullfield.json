@@ -1,0 +1,68 @@
+{
+  "beam_on": {
+    "depth_um": {
+      "mean": 69.44029850746269,
+      "std": 12.397948310061347,
+      "min": 0.0,
+      "max": 96.0
+    },
+    "length_mm": {
+      "mean": 2.2623134328358208,
+      "std": 0.7008639808624103,
+      "min": 0.0,
+      "max": 4.05
+    },
+    "width_mm": {
+      "mean": 0.3289253731343283,
+      "std": 0.033532703321160234,
+      "min": 0.0,
+      "max": 0.397
+    },
+    "volume_mm3": {
+      "mean": 0.022449180970149255,
+      "std": 0.010058211587299226,
+      "min": 0.0,
+      "max": 0.0461806
+    },
+    "n_samples": 134,
+    "beam_on_s": 0.0067,
+    "total_path_s": 0.0066999999999999985
+  },
+  "beam_on_local": {
+    "depth_um": {
+      "mean": 69.49242424242425,
+      "std": 9.996587457213353,
+      "min": 29.0,
+      "max": 94.0
+    },
+    "width_mm": {
+      "mean": 0.33128030303030304,
+      "std": 0.01760393998338087,
+      "min": 0.307,
+      "max": 0.397
+    },
+    "n_samples": 132
+  },
+  "spatial_fusion_depth": {
+    "n_columns": 44377,
+    "mean_um": 68.62077202154269,
+    "std_um": 9.233197262282335,
+    "min_um": 39.0,
+    "max_um": 96.0,
+    "p05_um": 57.0,
+    "p95_um": 88.0
+  },
+  "residual_liquid_at_line_starts": {
+    "n_line_starts": 1,
+    "n_nonzero": 1,
+    "max_mm3": 0.015834550000000003,
+    "mean_mm3": 0.015834550000000003,
+    "worst_line": 1
+  },
+  "dt": 5e-05,
+  "sample_time_convention": "solver timestep boundaries",
+  "extent_convention": "melted-cell outer extent",
+  "xres": 5e-05,
+  "yres": 1e-06,
+  "zres": 1e-06
+}

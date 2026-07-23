@@ -1,0 +1,72 @@
+{
+  "min_dwell_s": 0.0005859375000000001,
+  "bracket_s": [
+    0.0005625000000000001,
+    0.0005859375000000001
+  ],
+  "tolerance_s": 2.5e-05,
+  "criterion": "no liquid cells immediately before track two (RDF)",
+  "power_W": 150.0,
+  "tracking_step_s": 5e-05,
+  "resolution_m": {
+    "x": 5e-05,
+    "y": 1.25e-05,
+    "z": 1e-06
+  },
+  "passing_probe": {
+    "dwell_s": 0.0005859375000000001,
+    "second_track_start_s": 0.003919270833333334,
+    "liquid_cells": 0,
+    "max_liquid_overshoot_s": 0.0
+  },
+  "binding_failed_probe": {
+    "dwell_s": 0.0005625000000000001,
+    "second_track_start_s": 0.0038958333333333336,
+    "liquid_cells": 24,
+    "max_liquid_overshoot_s": 0.0010168466666666664
+  },
+  "history": [
+    {
+      "dwell_s": 0.0015,
+      "second_track_start_s": 0.004833333333333334,
+      "liquid_cells": 0,
+      "max_liquid_overshoot_s": 0.0
+    },
+    {
+      "dwell_s": 0.00075,
+      "second_track_start_s": 0.004083333333333334,
+      "liquid_cells": 0,
+      "max_liquid_overshoot_s": 0.0
+    },
+    {
+      "dwell_s": 0.000375,
+      "second_track_start_s": 0.0037083333333333334,
+      "liquid_cells": 4852,
+      "max_liquid_overshoot_s": 0.0013004666666666664
+    },
+    {
+      "dwell_s": 0.0005625000000000001,
+      "second_track_start_s": 0.0038958333333333336,
+      "liquid_cells": 24,
+      "max_liquid_overshoot_s": 0.0010168466666666664
+    },
+    {
+      "dwell_s": 0.00065625,
+      "second_track_start_s": 0.003989583333333334,
+      "liquid_cells": 0,
+      "max_liquid_overshoot_s": 0.0
+    },
+    {
+      "dwell_s": 0.0006093750000000001,
+      "second_track_start_s": 0.003942708333333334,
+      "liquid_cells": 0,
+      "max_liquid_overshoot_s": 0.0
+    },
+    {
+      "dwell_s": 0.0005859375000000001,
+      "second_track_start_s": 0.003919270833333334,
+      "liquid_cells": 0,
+      "max_liquid_overshoot_s": 0.0
+    }
+  ]
+}

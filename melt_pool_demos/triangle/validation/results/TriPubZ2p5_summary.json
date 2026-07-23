@@ -1,0 +1,12 @@
+{
+ "x_resolution_um": 50.0,
+ "z_resolution_um": 2.5,
+ "grid_points_melted": 865423,
+ "rdf_events": 1751101,
+ "scan_end_ms": 150.25,
+ "last_solidification_ms": 153.042,
+ "peak_volume_mm3": 0.18911250000000052,
+ "peak_length_mm": 7.1499999999999995,
+ "peak_depth_mm": 0.16,
+ "max_remelts": 5
+}

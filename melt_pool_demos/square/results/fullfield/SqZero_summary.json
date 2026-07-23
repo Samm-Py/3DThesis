@@ -1,0 +1,18 @@
+{
+  "peak_volume_mm3": 0.11748750000000002,
+  "peak_length_mm": 6.400000000000002,
+  "peak_width_mm": 0.40000000000000213,
+  "peak_depth_mm": 0.125,
+  "total_build_time_s": 0.340993,
+  "beam_path_time_s": 0.34,
+  "dwell_per_turn_s": 0.0,
+  "residual_liquid_at_starts_mm3": {
+    "max": 0.06283750000000002,
+    "mean": 0.05877012500000001,
+    "n_nonzero": 100
+  },
+  "n_events": 2069869,
+  "n_melted_cells": 898449,
+  "dt": 5e-05,
+  "zres": 5e-06
+}

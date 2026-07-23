@@ -1,0 +1,16 @@
+{
+  "steady_pool_mm": {
+    "length": 2.0500000000000007,
+    "width": 0.3,
+    "depth": 0.060000000000000005,
+    "trail": 1.9500000000000002,
+    "lead": 0.10000000000000053
+  },
+  "startup_distance_mm": 0.75,
+  "startup_time_s": 0.00025,
+  "solidification_tail_s": 0.0005540866666666664,
+  "last_liquid_s": 0.00388742,
+  "beam_end_s": 0.0033333333333333335,
+  "n_events": 11370,
+  "dt": 5e-05
+}

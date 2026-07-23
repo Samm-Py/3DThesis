@@ -1,0 +1,48 @@
+{
+  "min_dwell_s": 0.0009062499999999999,
+  "bracket_s": [
+    0.0008906249999999999,
+    0.0009062499999999999
+  ],
+  "tol_s": 2.5e-05,
+  "power_W": 150.0,
+  "tracking_step_s": 5e-05,
+  "binding_turn": 36,
+  "binding_liquid_cells": 12,
+  "binding_overshoot_s": 0.0014535000000000242,
+  "criterion": "no liquid cell at any line-start time (RDF)",
+  "history_ms": [
+    [
+      2.0,
+      true
+    ],
+    [
+      1.0,
+      true
+    ],
+    [
+      0.5,
+      false
+    ],
+    [
+      0.75,
+      false
+    ],
+    [
+      0.875,
+      false
+    ],
+    [
+      0.9375,
+      true
+    ],
+    [
+      0.9062499999999999,
+      true
+    ],
+    [
+      0.8906249999999999,
+      false
+    ]
+  ]
+}

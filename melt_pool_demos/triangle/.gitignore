@@ -1,0 +1,9 @@
+logs/
+cases/snapcase/
+cases/*/Data/
+cases/*/*.csv
+cases/*/*.json
+cases/*/*.png
+_dwell_probe/
+__pycache__/
+*.log

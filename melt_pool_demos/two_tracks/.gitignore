@@ -1,0 +1,4 @@
+cases/*/Data/
+cases/_dwell_probe/
+__pycache__/
+*.log

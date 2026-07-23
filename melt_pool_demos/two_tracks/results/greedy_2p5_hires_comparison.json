@@ -1,0 +1,232 @@
+{
+  "resolution_m": {
+    "x": 5e-05,
+    "y": 1e-06,
+    "z": 1e-06
+  },
+  "segment_mm": 2.5,
+  "continuous": {
+    "baseline": {
+      "name": "TwoBaselineX50Y1Z1Continuous",
+      "case": "/root/Research/3d_thesis_test/3DThesis/melt_pool_demos/two_tracks/cases/case_baseline_hires_continuous",
+      "stats": {
+        "beam_on": {
+          "depth_um": {
+            "mean": 69.51492537313433,
+            "std": 12.278931765138948,
+            "min": 0.0,
+            "max": 96.0
+          },
+          "length_mm": {
+            "mean": 2.2548507462686564,
+            "std": 0.7106563448037954,
+            "min": 0.0,
+            "max": 4.15
+          },
+          "width_mm": {
+            "mean": 0.3279328358208955,
+            "std": 0.033459531752438626,
+            "min": 0.0,
+            "max": 0.396
+          },
+          "volume_mm3": {
+            "mean": 0.02099197947761194,
+            "std": 0.009787124334353277,
+            "min": 0.0,
+            "max": 0.04602680000000001
+          },
+          "n_samples": 134,
+          "beam_on_s": 0.0067,
+          "total_path_s": 0.0067
+        },
+        "spatial_fusion_depth": {
+          "n_columns": 44377,
+          "mean_um": 68.62077202154269,
+          "std_um": 9.233197262282335,
+          "min_um": 39.0,
+          "max_um": 96.0,
+          "p05_um": 57.0,
+          "p95_um": 88.0
+        },
+        "residual_liquid_at_line_starts": {
+          "n_line_starts": 1,
+          "n_nonzero": 1,
+          "max_mm3": 0.015834550000000003,
+          "mean_mm3": 0.015834550000000003,
+          "worst_line": 1
+        },
+        "dt": 5e-05,
+        "xres": 5e-05,
+        "yres": 1e-06,
+        "zres": 1e-06
+      }
+    },
+    "greedy": {
+      "name": "TwoGreedy2p5X50Y1Z1Continuous",
+      "case": "/root/Research/3d_thesis_test/3DThesis/melt_pool_demos/two_tracks/cases/case_greedy2p5_hires_continuous",
+      "stats": {
+        "beam_on": {
+          "depth_um": {
+            "mean": 63.35658914728682,
+            "std": 7.751767439984455,
+            "min": 0.0,
+            "max": 80.0
+          },
+          "length_mm": {
+            "mean": 1.9957364341085275,
+            "std": 0.4663079050541247,
+            "min": 0.0,
+            "max": 3.25
+          },
+          "width_mm": {
+            "mean": 0.3192325581395349,
+            "std": 0.030103055969905118,
+            "min": 0.0,
+            "max": 0.378
+          },
+          "volume_mm3": {
+            "mean": 0.015190034883720931,
+            "std": 0.003229071853229347,
+            "min": 0.0,
+            "max": 0.022647700000000003
+          },
+          "n_samples": 129,
+          "beam_on_s": 0.00645,
+          "total_path_s": 0.006451013735892203
+        },
+        "spatial_fusion_depth": {
+          "n_columns": 43581,
+          "mean_um": 60.41887519790735,
+          "std_um": 4.899055440232408,
+          "min_um": 38.0,
+          "max_um": 80.0,
+          "p05_um": 53.0,
+          "p95_um": 67.0
+        },
+        "residual_liquid_at_line_starts": {
+          "n_line_starts": 1,
+          "n_nonzero": 1,
+          "max_mm3": 0.015832950000000002,
+          "mean_mm3": 0.015832950000000002,
+          "worst_line": 1
+        },
+        "dt": 5e-05,
+        "xres": 5e-05,
+        "yres": 1e-06,
+        "zres": 1e-06
+      }
+    }
+  },
+  "dwell": {
+    "baseline": {
+      "name": "TwoBaselineX50Y1Z1Dwell",
+      "case": "/root/Research/3d_thesis_test/3DThesis/melt_pool_demos/two_tracks/cases/case_baseline_hires_dwell",
+      "stats": {
+        "beam_on": {
+          "depth_um": {
+            "mean": 67.24626865671642,
+            "std": 12.489061821512253,
+            "min": 0.0,
+            "max": 89.0
+          },
+          "length_mm": {
+            "mean": 2.1324626865671643,
+            "std": 0.7027466758361454,
+            "min": 0.0,
+            "max": 3.55
+          },
+          "width_mm": {
+            "mean": 0.3225,
+            "std": 0.04129340773523129,
+            "min": 0.0,
+            "max": 0.362
+          },
+          "volume_mm3": {
+            "mean": 0.018876408955223883,
+            "std": 0.007840354859089585,
+            "min": 0.0,
+            "max": 0.03744385
+          },
+          "n_samples": 134,
+          "beam_on_s": 0.0067,
+          "total_path_s": 0.007252604666666667
+        },
+        "spatial_fusion_depth": {
+          "n_columns": 44377,
+          "mean_um": 66.60091939518219,
+          "std_um": 7.4100631453347825,
+          "min_um": 39.0,
+          "max_um": 89.0,
+          "p05_um": 56.0,
+          "p95_um": 81.0
+        },
+        "residual_liquid_at_line_starts": {
+          "n_line_starts": 1,
+          "n_nonzero": 0,
+          "max_mm3": 0.0,
+          "mean_mm3": 0.0,
+          "worst_line": 1
+        },
+        "dt": 5e-05,
+        "xres": 5e-05,
+        "yres": 1e-06,
+        "zres": 1e-06
+      }
+    },
+    "greedy": {
+      "name": "TwoGreedy2p5X50Y1Z1Dwell",
+      "case": "/root/Research/3d_thesis_test/3DThesis/melt_pool_demos/two_tracks/cases/case_greedy2p5_hires_dwell",
+      "stats": {
+        "beam_on": {
+          "depth_um": {
+            "mean": 61.98449612403101,
+            "std": 9.437665340098174,
+            "min": 0.0,
+            "max": 73.0
+          },
+          "length_mm": {
+            "mean": 1.9406976744186049,
+            "std": 0.5412004830585507,
+            "min": 0.0,
+            "max": 2.8000000000000007
+          },
+          "width_mm": {
+            "mean": 0.31477519379844965,
+            "std": 0.039728583096870225,
+            "min": 0.0,
+            "max": 0.341
+          },
+          "volume_mm3": {
+            "mean": 0.014717257751937987,
+            "std": 0.0038089416311456905,
+            "min": 0.0,
+            "max": 0.021707050000000002
+          },
+          "n_samples": 129,
+          "beam_on_s": 0.00645,
+          "total_path_s": 0.007011365489981649
+        },
+        "spatial_fusion_depth": {
+          "n_columns": 43143,
+          "mean_um": 60.68961361055096,
+          "std_um": 3.3258635534706023,
+          "min_um": 44.0,
+          "max_um": 73.0,
+          "p05_um": 55.0,
+          "p95_um": 65.0
+        },
+        "residual_liquid_at_line_starts": {
+          "n_line_starts": 1,
+          "n_nonzero": 0,
+          "max_mm3": 0.0,
+          "mean_mm3": 0.0,
+          "worst_line": 1
+        },
+        "dt": 5e-05,
+        "xres": 5e-05,
+        "yres": 1e-06,
+        "zres": 1e-06
+      }
+    }
+  }
+}

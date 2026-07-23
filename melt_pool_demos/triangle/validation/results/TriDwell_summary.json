@@ -1,0 +1,10 @@
+{
+ "grid_points_melted": 448951,
+ "rdf_events": 2312167,
+ "scan_end_ms": 1444.9,
+ "last_solidification_ms": 1445.6100000000001,
+ "peak_volume_mm3": 1.2518437499999981,
+ "peak_length_mm": 9.899999999999999,
+ "peak_depth_mm": 0.3625,
+ "max_remelts": 8
+}

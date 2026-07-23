@@ -1,0 +1,51 @@
+{
+  "beam_on": {
+    "depth_um": {
+      "mean": 67.3,
+      "std": 11.02240143223487,
+      "min": 0.0,
+      "max": 85.0
+    },
+    "length_mm": {
+      "mean": 2.216666666666667,
+      "std": 0.7718844185210344,
+      "min": 0.0,
+      "max": 3.9499999999999984
+    },
+    "width_mm": {
+      "mean": 0.3167083333333333,
+      "std": 0.029424025283582275,
+      "min": 0.0,
+      "max": 0.332
+    },
+    "volume_mm3": {
+      "mean": 0.01601095791666667,
+      "std": 0.004823982042894283,
+      "min": 0.0,
+      "max": 0.026320200000000002
+    },
+    "n_samples": 120,
+    "beam_on_s": 0.006,
+    "total_path_s": 0.006563144410907428
+  },
+  "spatial_fusion_depth": {
+    "n_columns": 44522,
+    "mean_um": 60.63168770495486,
+    "std_um": 7.574662307578322,
+    "min_um": 33.0,
+    "max_um": 85.0,
+    "p05_um": 48.0,
+    "p95_um": 74.0
+  },
+  "residual_liquid_at_line_starts": {
+    "n_line_starts": 1,
+    "n_nonzero": 0,
+    "max_mm3": 0.0,
+    "mean_mm3": 0.0,
+    "worst_line": 1
+  },
+  "dt": 5e-05,
+  "xres": 5e-05,
+  "yres": 1e-06,
+  "zres": 1e-06
+}

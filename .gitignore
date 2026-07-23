@@ -1,0 +1,46 @@
+# Build trees
+/build*/
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.venv/
+
+# 3DThesis raw solver output (regenerable and often very large)
+**/Data/
+**/_dwell_probe/
+**/snapcase*/
+/oti_ad/anim_data/
+/oti_ad/frames/
+/OptimizeRasters/ckpt/
+/OptimizeRasters/3DThesis/TestInputs/_*.txt
+
+# Workflow state and logs
+*.log
+*.out
+*.flag
+**/logs/
+.*_done*
+.*_fail*
+.driver_done
+**/_*queue*.sh
+
+# LaTeX intermediates (keep source and final PDF)
+*.aux
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Overleaf upload bundle (regenerable from raster/doc/paper/)
+/melt_pool_demos/raster/doc/paper.zip
+
+# Editor / OS noise
+.DS_Store
+*~
+
+# Large regenerable derived result grids (heatmaps; rebuilt from replays)
+**/results/**/*_fusionmap.csv
+
+# Optimizer resume state (regenerable)
+**/*.checkpoint
+**/*.checkpoint.*

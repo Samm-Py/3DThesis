@@ -1,0 +1,5 @@
+cases/*/Data/
+cases/case_opt_*/
+logs/
+__pycache__/
+*.log
