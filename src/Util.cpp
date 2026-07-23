@@ -76,6 +76,11 @@ void Util::ClearNodes(Nodes& nodes) {
 void Util::Calc_AllScansEndTime(Simdat& sim) {
 	for (const vector<path_seg>& path : sim.paths) {
 		sim.util.allScansEndTime = max(sim.util.allScansEndTime, path.back().seg_time);
+		// Track the largest per-segment beam width factor so conservative
+		// radii (r_max, melt search) can be sized for the widest beam used.
+		for (const path_seg& seg : path) {
+			sim.util.maxWidthMod = max(sim.util.maxWidthMod, seg.swidth);
+		}
 	}
 }
 
@@ -135,9 +140,12 @@ void Util::Calc_ScanBounds(Domain& domain, const vector<vector<path_seg>>& paths
 
 }
 
-void Util::Calc_NonD_dt(vector<Beam>& beams, const Material& material) {
+void Util::Calc_NonD_dt(vector<Beam>& beams, const Material& material, const double maxWidthMod) {
 	for (Beam& beam : beams) {
-		beam.nond_dt = beam.ax * beam.ax / thesis::to_double(material.a);
+		// Sized for the widest effective beam on the paths (conservative: a
+		// larger nond_dt keeps integration steps smaller for longer).
+		const double axw2 = thesis::to_double(beam.ax * beam.ax) * maxWidthMod * maxWidthMod;
+		beam.nond_dt = axw2 / thesis::to_double(material.a);
 	}
 	return;
 }
@@ -146,15 +154,19 @@ void Util::Calc_RMax (Simdat& sim){
 	sim.settings.t_hist = 1.0 / sim.settings.t_hist;
 	if (sim.settings.r_max<0.0) {
 		for (const Beam& beam : sim.beams) {
+			// r_max is domain-sizing bookkeeping (plain double), so use the value
+			// part of the (now Real) lateral beam width here, sized for the widest
+			// per-segment width factor used anywhere on the paths.
+			const double ax = thesis::to_double(beam.ax) * sim.util.maxWidthMod;
 			//If the temperature never gets to 1/t_hist the peak temperature
-			if (sim.settings.t_hist < exp(3.0 / 2.0)) { sim.settings.r_max = beam.ax * sqrt(log(sim.settings.t_hist) / 3.0); }
-			else { sim.settings.r_max = beam.ax * pow(sim.settings.t_hist, (1.0 / 3.0)) / sqrt(2.0 * exp(1.0)); }
+			if (sim.settings.t_hist < exp(3.0 / 2.0)) { sim.settings.r_max = ax * sqrt(log(sim.settings.t_hist) / 3.0); }
+			else { sim.settings.r_max = ax * pow(sim.settings.t_hist, (1.0 / 3.0)) / sqrt(2.0 * exp(1.0)); }
 			//If the power never gets to x (K/s)
 			double beta = thesis::to_double(pow(3.0 / 3.14159, 1.5) * beam.q / (sim.material.rho * sim.material.cps));
 			double temp_diff = thesis::to_double(sim.material.T_liq - sim.material.T_init);
 			double x = temp_diff * sim.settings.p_hist;
 			double r_max_2;
-			if (beta / (x * beam.ax * beam.ax * beam.ax) < exp(3.0 / 2.0)) { r_max_2 = beam.ax * sqrt(log(beta / (x * beam.ax * beam.ax * beam.ax)) / 3.0); }
+			if (beta / (x * ax * ax * ax) < exp(3.0 / 2.0)) { r_max_2 = ax * sqrt(log(beta / (x * ax * ax * ax)) / 3.0); }
 			else { r_max_2 = pow(beta / x, (1.0 / 3.0)) / sqrt(2.0 * exp(1.0)); }
 
 			//Choose the greater of the two
@@ -194,9 +206,10 @@ double Util::GetRefTime(const double tpp, const int seg, const vector<path_seg>&
 	double ref_t;
 	const double spp = max(tpp / beam.nond_dt, 0.0);
 	
-	//Sets maximum time for line mode (derived from diffusion distance)
+	//Sets maximum time for line mode (derived from diffusion distance),
+	//using the segment's effective beam width
 	if (path[seg].smode == 0) {
-		double t0 = 0.58870501125 * beam.ax / path[seg].sparam; // sqrt(log(sqrt(2)))~0.58870501125
+		double t0 = 0.58870501125 * thesis::to_double(beam.ax) * path[seg].swidth / path[seg].sparam; // sqrt(log(sqrt(2)))~0.58870501125
 		ref_t = t0 * sqrt(12.0 * spp + 1.0);
 	}
 	//Sets maximum time for spot mode (equal to spot time)
@@ -228,6 +241,9 @@ int_seg	Util::GetBeamLoc(const double time, const int seg, const vector<path_seg
 		current_seg.yb = path[seg - 1].sy + (tcur / dt_cur)*dy;
 		current_seg.zb = path[seg - 1].sz + (tcur / dt_cur)*dz;
 	}
+
+	// Carry the segment's lateral beam width factor to the integration node
+	current_seg.wmod = path[seg].swidth;
 
 	// If we are sufficiently outside the domain, set power to zero (so it won't be added to integration)
 	if (Util::InRMax(current_seg.xb,current_seg.yb,sim.domain,sim.settings)){ current_seg.qmod = path[seg].sqmod; }

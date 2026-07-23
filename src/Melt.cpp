@@ -27,10 +27,10 @@ void beam_trace_perimeter(vector<int>& test_pts, Grid& grid, const Simdat& sim, 
 		const Beam& beam = sim.beams[pathNum];
 
 		// Out of bounds check
-		const double t_sub = (sim.param.radiusCheck*sim.param.radiusCheck-1)*(beam.ax*beam.ax)/(12.0*thesis::to_double(sim.material.a));
+		const double t_sub = (sim.param.radiusCheck*sim.param.radiusCheck-1)*thesis::to_double(beam.ax*beam.ax)/(12.0*thesis::to_double(sim.material.a));
 		const double t_start = (t_end_norm-t_sub<0.0) ? 0.0 : t_end_norm-t_sub;
 		const double t_end = t_end_norm;
-		const double rCheck2 = sim.param.radiusCheck*sim.param.radiusCheck*beam.ax*beam.ax;
+		const double rCheck2 = sim.param.radiusCheck*sim.param.radiusCheck*thesis::to_double(beam.ax*beam.ax);
 
 		// Set perimeter lambda
 		auto add_perimeter_points = [&](int fixed_dim, bool is_x_fixed, int min_range, int max_range, double x, double y) {

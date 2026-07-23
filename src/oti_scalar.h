@@ -21,17 +21,45 @@
 namespace thesis {
 
 // Independent quantities we differentiate with respect to; each maps to one OTI
-// infinitesimal direction. Diffusivity a = kon/(rho*cps) is derived, so it is
-// NOT a slot -- its derivative is inherited from kon/rho/cps automatically.
+// infinitesimal direction. The set is deliberately minimal -- only the process
+// CONTROLS we optimise plus the spatial gradient used to turn a field
+// sensitivity into a melt-pool edge/depth sensitivity:
+//   X,Y,Z -> spatial gradient dT/dn at the isotherm (implicit-function edge sens)
+//   Q     -> SEEDED segment's effective beam power (W)   (control)
+//   SIG   -> SEEDED segment's lateral beam width (m)     (control; ax and ay together)
+//   V     -> SEEDED segment's scan speed (m/s)           (control)
+//   DWELL -> SEEDED beam-off dwell row's duration (s)    (control)
+// The seeded segment defaults to the LAST line of the path file (per path) --
+// the optimizer's "current" segment -- and can be pointed at any HISTORY
+// segment via Settings.txt Compute/SeedSegment (0-based path-row index) for
+// cross-segment influence Jacobians ("seed segment j, observe at scan end").
+// Q and SIG are seeded at quadrature-node construction in Calc.cpp, only for
+// nodes on the seeded segment, so dT_dQ/dT_dsig are exact per-segment control
+// derivatives and every other segment deliberately carries zero derivative.
+// X/Y/Z are seeded per evaluation point in Grid::Calc_T.
+// V is structurally different: at FIXED path geometry it changes only the
+// seeded segment's DURATION dt = L/v, which (a) stretches that segment's
+// conduction times and quadrature weights and (b) -- because the snapshot is
+// taken at scan end -- shifts the observation time relative to every EARLIER
+// node, while later nodes shift together with the observation and cancel. So
+// unlike Q/SIG, dT_dv has a history channel; see the three-zone rule
+// (SeedCtx / dv_tau) in Calc.cpp. Beam POSITIONS are v-independent
+// (geometry fixed), so no spatial term.
+// DWELL is V's simpler sibling: a beam-off dwell row carries no nodes (culled
+// by qmod>0), so ONLY the earlier-node history shift survives -- no stretch,
+// no weight channel. Seeding the dwell duration reuses dv_tau's history branch
+// verbatim; see the dwell branch of SeedCtx in Calc.cpp.
+// Material properties (kon/rho/cps) are NOT differentiated -- they are fixed,
+// not controls -- which keeps the algebra small (M=7).
 // DV_COUNT (kept last) is the number of directions, i.e. the OTI parameter M.
 enum DesignVar {
     DV_X = 0,   // evaluation point x
     DV_Y,       // evaluation point y
     DV_Z,       // evaluation point z
-    DV_Q,       // beam power
-    DV_KON,     // thermal conductivity
-    DV_RHO,     // density
-    DV_CPS,     // specific heat
+    DV_Q,       // current segment's beam power (W)
+    DV_SIG,     // current segment's lateral beam width sigma (m)
+    DV_V,       // current segment's scan speed (m/s)
+    DV_DWELL,   // SEEDED beam-off dwell row's duration (s)     (control)
     DV_COUNT
 };
 
