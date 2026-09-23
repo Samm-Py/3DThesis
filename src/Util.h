@@ -64,7 +64,7 @@ namespace Util {
 	double getMin(const vector<vector<double>>&, int);
 	double getMax(const vector<vector<double>>&, int);
 	// Calculates length, width and origin of melt pool
-	array<double, 4> getLengthWidthOrigin(const vector<vector<double>>&, double, const int, const int);
+	array<double, 4> getLengthWidthOrigin(const vector<vector<double>>&, double, double, const int, const int);
 	// Calculates percentage of the melt pool box that is melted
-	double getPerBoxMelted(const vector<vector<double>>&, double, double, double);
+	double getPerBoxMelted(const vector<vector<double>>&, double, double, double, double, double, double);
 	}

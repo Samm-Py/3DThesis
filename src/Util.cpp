@@ -280,19 +280,32 @@ double Util::getMin(const vector<vector<double>>& df, int index) {
     }))[index];
 }
 
-std::array<double, 4> Util::getLengthWidthOrigin(const vector<vector<double>>& df, double resolution, const int x, const int y){
-    double length = Util::getMax(df, x) - Util::getMin(df, x) + resolution;
-    double width = Util::getMax(df, y) - Util::getMin(df, y) + resolution;
+// Bounding box of the liquid cell CENTRES, widened by one cell on each axis so
+// the box spans the cells' territory rather than their centres. The two axes
+// take their own resolutions: passing a single resolution for both (previously
+// zres, for an x/y extent) understated the width by yres - zres.
+//
+// For a field rotated out of grid alignment the padding is approximate -- the
+// cell footprint is no longer axis-aligned with the extent being measured. It is
+// exact for a scan parallel to an axis, where the rotated field equals the raw.
+std::array<double, 4> Util::getLengthWidthOrigin(const vector<vector<double>>& df, double xres, double yres, const int x, const int y){
+    double length = Util::getMax(df, x) - Util::getMin(df, x) + xres;
+    double width = Util::getMax(df, y) - Util::getMin(df, y) + yres;
     std::array<double, 2> origin = {getMin(df, x), getMin(df, y)};
     std::array<double, 4> stats = {length, width, origin[0], origin[1]};
     return stats;
 }
 
 
-double Util::getPerBoxMelted(const vector<vector<double>>& df, double length, double width, double resolution){
-    double melted_area = df.size() * pow(resolution, 2);
-    double box_area = length * width;
-    double per_box_melted = melted_area / box_area * 100;
+// Fraction of the pool's bounding box that is actually molten. `df` holds the
+// liquid cells in 3D, so this is a VOLUME fraction against the length x width x
+// depth box; comparing a 3D cell count against a 2D box area (and with a single
+// resolution standing in for all three axes) did not yield a fraction at all.
+double Util::getPerBoxMelted(const vector<vector<double>>& df, double length, double width, double depth, double xres, double yres, double zres){
+    double melted_volume = df.size() * xres * yres * zres;
+    double box_volume = length * width * depth;
+    if (box_volume <= 0.0) {return std::numeric_limits<double>::quiet_NaN();}
+    double per_box_melted = melted_volume / box_volume * 100;
     if (per_box_melted <= 100.0) {return per_box_melted;}
     else {return std::numeric_limits<double>::quiet_NaN();}
 }

@@ -521,8 +521,19 @@ void Melt::calc_mp_info(const vector<int>& depths, Grid& grid, const Simdat& sim
 			const double width = maxRotY - minRotY;
 			const double length = maxRotX - minRotX;
 			
-			// Get depth
-			const double depth = sim.domain.xres * (*std::max_element(depths.begin(), depths.end()));
+			// Get depth. Two things this must not do: scale a z-extent by xres
+			// (50x too large at our 50 um / 1 um grid), and take the maximum
+			// over the WHOLE depths array -- that is every surface column in the
+			// domain, so a second pool elsewhere, or any deeper spot left by an
+			// earlier pass, would be reported as this pool's depth. This
+			// function exists to give each local pool its own statistics, so the
+			// maximum is taken over this pool's columns only.
+			int deepest = 0;
+			for (const int& liq_pt : local_liq_pts){
+				const int dnum = grid.get_i(liq_pt) * sim.domain.ynum + grid.get_j(liq_pt);
+				deepest = std::max(deepest, depths[dnum]);
+			}
+			const double depth = sim.domain.zres * deepest;
 
 			// Now add to all relevant points
 			for (const int& liq_pt:local_liq_pts){

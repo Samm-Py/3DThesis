@@ -336,20 +336,25 @@ void Run::Snapshots_GeometryBounds(Grid& grid, const Simdat& sim) {
 		if (pool.size() == 0){snaps.push_back({0,0,nan,nan,0,0,nan,nan,0,0});}
 		else{
 			array<double, 10> row;
+			const double xres = sim.domain.xres;
+			const double yres = sim.domain.yres;
 			vector<vector<double>> df_rot = Util::rotateField(pool, angle, x, y);
-			array<double, 4> stats = Util::getLengthWidthOrigin(pool, zres, x, y);
+			array<double, 4> stats = Util::getLengthWidthOrigin(pool, xres, yres, x, y);
 			for (int k = 0; k < 4; k++){
 				row[k] = stats[k];
 			}
-			stats = Util::getLengthWidthOrigin(df_rot, zres, x, y);
+			stats = Util::getLengthWidthOrigin(df_rot, xres, yres, x, y);
 			for (int k = 0; k < 4; k++){
 				row[k + 4] = stats[k];
 			}
 			double length = row[length_rotated];
 			double width = row[width_rotated];
+			// Depth is deliberately NOT padded like length and width: it is the
+			// span from the surface to the deepest liquid cell centre, which is
+			// what the isosurface measurement it is compared against reports.
 			double depth = Util::getMax(pool, z) - Util::getMin(pool, z);
 			if (depth == 0){depth = 0.5 * zres;}
-			row[8] = Util::getPerBoxMelted(pool, length, width, zres);
+			row[8] = Util::getPerBoxMelted(pool, length, width, depth, xres, yres, zres);
 			row[9] = depth;
 			snaps.push_back(row);
 		}		
