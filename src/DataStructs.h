@@ -17,6 +17,8 @@
 #include <climits>
 #include <cfloat>
 
+#include "oti_scalar.h"
+
 using std::vector;
 using std::string;
 using std::deque;
@@ -24,8 +26,13 @@ using std::list;
 
 #define PI 3.14159265358979323846
 
+// Integration segment. Coordinates come from the (double) scan path; the
+// diffusion, weight and power fields are Real so they carry the seeded
+// segment's control derivatives (Q, sigma, v, tau) into the quadrature nodes.
+// Calc.cpp applies those seeds.
 struct int_seg {
-	double xb, yb, zb, phix, phiy, phiz, dtau, qmod;
+	Real xb, yb, zb, phix, phiy, phiz, dtau, qmod;
+	double wmod = 1.0; // lateral beam width factor of the source segment
 };
 
 // What is used to integrate
@@ -35,7 +42,7 @@ struct Nodes {
 	// {phix,phiy,phiz} = diffusion
 	// {dtau} = node weight
 	// {expmod} = frontloads computation
-	vector<double> xb, yb, zb, phix, phiy, phiz, dtau, expmod;
+	vector<Real> xb, yb, zb, phix, phiy, phiz, dtau, expmod;
 };
 
 // What is read in from the paths
@@ -44,6 +51,8 @@ struct path_seg{
 	double sx, sy, sz;	//Segment end coordinates
 	double sqmod;		//Segment power modulation
 	double sparam;		//Segment time parameter (speed | spot time )
+	double swidth = 1.0;//Segment lateral beam width factor (multiplies beam ax/ay;
+	                    //optional 7th path column, 1.0 when absent)
 	double seg_time;	//Segment end time
 };
 
@@ -57,24 +66,33 @@ struct coord
 struct FileNames {
 	string	name, dataDir, mode, material, beam, path;
 	string	domain, output, settings;
+	string	rank_suffix; // "" in serial; ".<rank>" under MPI so per-rank
+	                     // snapshot slices don't clobber a shared filename
 };
 
-// Material constants
+// Material constants. Thermophysical properties are Real but never seeded
+// (see Init::FileRead_Material), so they carry zero derivative; being Real,
+// any of them could become a design variable by seeding it where it is read.
+// The CET fit parameters stay double (post-processing only).
 struct Material {
-	double kon; // Thermal Conductivty
-	double rho; // Density
-	double cps; // Specifc Heat
-	double T_liq; // Liquidus Temperature
-	double T_init; // Inital Temperature (Preheat/Ambient)
-	double a; // Thermal Diffusivity
+	Real kon; // Thermal Conductivty
+	Real rho; // Density
+	Real cps; // Specifc Heat
+	Real T_liq; // Liquidus Temperature
+	Real T_init; // Inital Temperature (Preheat/Ambient)
+	Real a; // Thermal Diffusivity
 	double cet_a, cet_n, cet_N0; // Parameters for CET
 };
 
-// Beam specific parameters
+// Beam specific parameters. q, ax and ay are Real because the seeded segment's
+// power and lateral width are built from them; the seeds themselves are applied
+// per segment in Calc.cpp, not here. Depth, efficiency and the adaptive
+// nondimensional timestep stay double.
 struct Beam {
-	double ax, ay, az; // Beam Shape
+	Real ax, ay;       // Lateral beam widths: Real so dT/d(sigma) propagates (DV_SIG)
+	double az;         // Depth/absorption sigma: fixed material property, not a control
 	double eff; // Absoprtion Efficiency
-	double q; // Beam Power
+	Real q; // Beam Power
 	double nond_dt; // Nondimensional Time
 };
 
@@ -138,14 +156,26 @@ struct Settings {
 	int thnum;
 	bool use_PINT;
 
+	// OTI seed segment: 0-based Path.txt DATA-row index (header excluded; the
+	// solver's internal path prepends an origin spot, handled in seed_ctx) of
+	// the segment whose controls (Q, sigma, v) carry the derivative seeds.
+	// -1 (default) = the LAST segment, the pre-existing behavior. A
+	// non-default value enables "seed segment j, observe at scan end" for
+	// cross-segment influence Jacobians; incompatible with path compression
+	// (combined far-history nodes cannot be zone-classified against a middle
+	// seed), which Init enforces.
+	int seed_seg;
+
 	// MPI
 	bool mpi_overlap;
 };
 
 // Some utility variables
-struct Utility { 
+struct Utility {
 	double allScansEndTime = 0;		// Time when all scans are done
 	double approxEndTime = 0;		// Approximate end time to simulation
+	double maxWidthMod = 1.0;		// Max per-segment beam width factor over all
+									// paths; sizes conservative radii (r_max, melt search)
 	bool sol_finish = false;				// Has solidification finished
 	bool do_sol = false;					// Do solidification calculation
 };

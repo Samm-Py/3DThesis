@@ -113,9 +113,9 @@ void Run::Snapshots_NoTracking(Grid& grid, const Simdat& sim) {
 		}
 		std::cout << "\n";
 
-		// Output 
-		grid.Output(sim, "Snapshot." + Util::ZeroPadNumber(itert, 2));
-		
+		// Output
+		grid.Output(sim, "Snapshot." + Util::ZeroPadNumber(itert, 2) + sim.files.rank_suffix);
+
 		// Clear quadrature nodes
 		Util::ClearNodes(nodes);
 	}
@@ -184,7 +184,7 @@ void Run::Snapshots_Volume(Grid& grid, const Simdat& sim) {
 		}
 		
 		// Output results
-		grid.Output(sim, "Snapshot." + Util::ZeroPadNumber(i, 2));
+		grid.Output(sim, "Snapshot." + Util::ZeroPadNumber(i, 2) + sim.files.rank_suffix);
 
 		// Clear integration segments
 		Util::ClearNodes(nodes);
@@ -336,20 +336,25 @@ void Run::Snapshots_GeometryBounds(Grid& grid, const Simdat& sim) {
 		if (pool.size() == 0){snaps.push_back({0,0,nan,nan,0,0,nan,nan,0,0});}
 		else{
 			array<double, 10> row;
+			const double xres = sim.domain.xres;
+			const double yres = sim.domain.yres;
 			vector<vector<double>> df_rot = Util::rotateField(pool, angle, x, y);
-			array<double, 4> stats = Util::getLengthWidthOrigin(pool, zres, x, y);
+			array<double, 4> stats = Util::getLengthWidthOrigin(pool, xres, yres, x, y);
 			for (int k = 0; k < 4; k++){
 				row[k] = stats[k];
 			}
-			stats = Util::getLengthWidthOrigin(df_rot, zres, x, y);
+			stats = Util::getLengthWidthOrigin(df_rot, xres, yres, x, y);
 			for (int k = 0; k < 4; k++){
 				row[k + 4] = stats[k];
 			}
 			double length = row[length_rotated];
 			double width = row[width_rotated];
+			// Depth is deliberately NOT padded like length and width: it is the
+			// span from the surface to the deepest liquid cell centre, which is
+			// what the isosurface measurement it is compared against reports.
 			double depth = Util::getMax(pool, z) - Util::getMin(pool, z);
 			if (depth == 0){depth = 0.5 * zres;}
-			row[8] = Util::getPerBoxMelted(pool, length, width, zres);
+			row[8] = Util::getPerBoxMelted(pool, length, width, depth, xres, yres, zres);
 			row[9] = depth;
 			snaps.push_back(row);
 		}		
@@ -736,8 +741,8 @@ void Run::Stork(Grid& grid, const Simdat& sim) {
 	vector<uint8_t> c_beta(c_pnum, static_cast<uint8_t>(0));
 
 	// Info for "vertices"
-	vector<double> T_alpha(sim.domain.pnum, sim.material.T_init);
-	vector<double> T_beta(sim.domain.pnum, sim.material.T_init);
+	vector<double> T_alpha(sim.domain.pnum, thesis::to_double(sim.material.T_init));
+	vector<double> T_beta(sim.domain.pnum, thesis::to_double(sim.material.T_init));
 	vector<uint8_t> T_calc_alpha(sim.domain.pnum, static_cast<uint8_t>(1));
 	vector<uint8_t> T_calc_beta(sim.domain.pnum, static_cast<uint8_t>(1));
 	vector<uint8_t> isLiq(sim.domain.pnum, static_cast<uint8_t>(0));

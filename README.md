@@ -4,6 +4,20 @@ Heat transfer code utilizing a nondimensionalized semi-analytic solution to movi
 
 A detailed explanation of the mathematics can be found in [Stump and Plotkowski](CITATION.bib).
 
+## Automatic differentiation (OTI)
+
+This branch adds optional first-order automatic differentiation. Built with
+`-DTHESIS_ENABLE_OTI=ON`, 3dThesis writes the exact derivatives of the
+temperature with respect to position and to one path row's power, beam width,
+scan speed or dwell time next to `T`, from a single run. It uses
+order-truncated-imaginary (OTI) numbers from
+[Sparrow](https://github.com/ORNL-MDF/Sparrow). Without the flag the solver's
+scalar type is plain `double` and no derivatives are carried.
+
+[`ad_tutorial/`](ad_tutorial/README.md) explains how the implementation works,
+with runnable checks, and carries it through to melt-pool geometry
+sensitivities.
+
 ## Citing
 
 If you use 3dThesis in your work, please cite the [Stump and Plotkowski](CITATION.bib).
@@ -21,7 +35,13 @@ The original release is available on [DOE Code](https://doi.org/10.11578/dc.2020
 
 ## Build
 
-3dThesis requires a C++ compiler and OpenMP for on-node parallelism. 3dThesis will optionally use MPI if available on the system.
+3dThesis requires a C++ compiler and OpenMP for on-node parallelism. MPI and
+OTI are independently selectable CMake features:
+
+- `-DTHESIS_ENABLE_MPI=ON/OFF`
+- `-DTHESIS_ENABLE_OTI=ON/OFF`
+- `-DTHESIS_OTI_INCLUDE_DIR=/path/to/Sparrow/include` (optional; a Sparrow or
+  cpp_oti_lib checkout next to this repository is found automatically)
 
 3dThesis primarily support CMake builds. A minimal example build and install looks like:
 

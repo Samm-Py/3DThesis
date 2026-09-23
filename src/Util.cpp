@@ -76,6 +76,11 @@ void Util::ClearNodes(Nodes& nodes) {
 void Util::Calc_AllScansEndTime(Simdat& sim) {
 	for (const vector<path_seg>& path : sim.paths) {
 		sim.util.allScansEndTime = max(sim.util.allScansEndTime, path.back().seg_time);
+		// Track the largest per-segment beam width factor so conservative
+		// radii (r_max, melt search) can be sized for the widest beam used.
+		for (const path_seg& seg : path) {
+			sim.util.maxWidthMod = max(sim.util.maxWidthMod, seg.swidth);
+		}
 	}
 }
 
@@ -135,9 +140,12 @@ void Util::Calc_ScanBounds(Domain& domain, const vector<vector<path_seg>>& paths
 
 }
 
-void Util::Calc_NonD_dt(vector<Beam>& beams, const Material& material) {
+void Util::Calc_NonD_dt(vector<Beam>& beams, const Material& material, const double maxWidthMod) {
 	for (Beam& beam : beams) {
-		beam.nond_dt = beam.ax * beam.ax / material.a;
+		// Sized for the widest effective beam on the paths (conservative: a
+		// larger nond_dt keeps integration steps smaller for longer).
+		const double axw2 = thesis::to_double(beam.ax * beam.ax) * maxWidthMod * maxWidthMod;
+		beam.nond_dt = axw2 / thesis::to_double(material.a);
 	}
 	return;
 }
@@ -146,15 +154,19 @@ void Util::Calc_RMax (Simdat& sim){
 	sim.settings.t_hist = 1.0 / sim.settings.t_hist;
 	if (sim.settings.r_max<0.0) {
 		for (const Beam& beam : sim.beams) {
+			// r_max is domain-sizing bookkeeping (plain double), so use the value
+			// part of the (now Real) lateral beam width here, sized for the widest
+			// per-segment width factor used anywhere on the paths.
+			const double ax = thesis::to_double(beam.ax) * sim.util.maxWidthMod;
 			//If the temperature never gets to 1/t_hist the peak temperature
-			if (sim.settings.t_hist < exp(3.0 / 2.0)) { sim.settings.r_max = beam.ax * sqrt(log(sim.settings.t_hist) / 3.0); }
-			else { sim.settings.r_max = beam.ax * pow(sim.settings.t_hist, (1.0 / 3.0)) / sqrt(2.0 * exp(1.0)); }
+			if (sim.settings.t_hist < exp(3.0 / 2.0)) { sim.settings.r_max = ax * sqrt(log(sim.settings.t_hist) / 3.0); }
+			else { sim.settings.r_max = ax * pow(sim.settings.t_hist, (1.0 / 3.0)) / sqrt(2.0 * exp(1.0)); }
 			//If the power never gets to x (K/s)
-			double beta = pow(3.0 / 3.14159, 1.5) * beam.q / (sim.material.rho * sim.material.cps);
-			double temp_diff = sim.material.T_liq - sim.material.T_init;
+			double beta = thesis::to_double(pow(3.0 / 3.14159, 1.5) * beam.q / (sim.material.rho * sim.material.cps));
+			double temp_diff = thesis::to_double(sim.material.T_liq - sim.material.T_init);
 			double x = temp_diff * sim.settings.p_hist;
 			double r_max_2;
-			if (beta / (x * beam.ax * beam.ax * beam.ax) < exp(3.0 / 2.0)) { r_max_2 = beam.ax * sqrt(log(beta / (x * beam.ax * beam.ax * beam.ax)) / 3.0); }
+			if (beta / (x * ax * ax * ax) < exp(3.0 / 2.0)) { r_max_2 = ax * sqrt(log(beta / (x * ax * ax * ax)) / 3.0); }
 			else { r_max_2 = pow(beta / x, (1.0 / 3.0)) / sqrt(2.0 * exp(1.0)); }
 
 			//Choose the greater of the two
@@ -165,7 +177,7 @@ void Util::Calc_RMax (Simdat& sim){
 	return;
 }
 
-bool Util::InRMax(const double x, const double y, const Domain& domain, const Settings& settings) {
+bool Util::InRMax(const Real x, const Real y, const Domain& domain, const Settings& settings) {
 	if ((x > (domain.xmax + settings.r_max)) || (x < (domain.xmin - settings.r_max))) {return false;}
 	else if ((y >(domain.ymax + settings.r_max)) || (y < (domain.ymin - settings.r_max))) {return false; }
 	else {return true;}
@@ -176,10 +188,10 @@ double Util::t0calc(const double t, const Beam& beam, const Material& material, 
 	const double t_hist_t = beam.nond_dt / 12.0*(pow(settings.t_hist, (2.0 / 3.0)) - 1); 
 
 	//Time for beam to never exert more than a fraction (p_hist) of the difference between the preheat and solidus temperature
-	const double beta = pow(3 / 3.14159, 1.5) * beam.q / (material.rho * material.cps);
-	const double temp_diff = material.T_liq - material.T_init;
+	const double beta = thesis::to_double(pow(3 / 3.14159, 1.5) * beam.q / (material.rho * material.cps));
+	const double temp_diff = thesis::to_double(material.T_liq - material.T_init);
 	const double x = temp_diff * settings.p_hist;
-	const double y = 432.0*t*(x*x)*(material.a*material.a*material.a) / (beta*beta);
+	const double y = 432.0*t*(x*x)*thesis::to_double(material.a*material.a*material.a) / (beta*beta);
 	const double p_hist_t = t / ((1.0 + sqrt(y))*(1.0 + sqrt(y)));  
 
 	double t0 = t - max(t_hist_t, p_hist_t);
@@ -194,9 +206,10 @@ double Util::GetRefTime(const double tpp, const int seg, const vector<path_seg>&
 	double ref_t;
 	const double spp = max(tpp / beam.nond_dt, 0.0);
 	
-	//Sets maximum time for line mode (derived from diffusion distance)
+	//Sets maximum time for line mode (derived from diffusion distance),
+	//using the segment's effective beam width
 	if (path[seg].smode == 0) {
-		double t0 = 0.58870501125 * beam.ax / path[seg].sparam; // sqrt(log(sqrt(2)))~0.58870501125
+		double t0 = 0.58870501125 * thesis::to_double(beam.ax) * path[seg].swidth / path[seg].sparam; // sqrt(log(sqrt(2)))~0.58870501125
 		ref_t = t0 * sqrt(12.0 * spp + 1.0);
 	}
 	//Sets maximum time for spot mode (equal to spot time)
@@ -228,6 +241,9 @@ int_seg	Util::GetBeamLoc(const double time, const int seg, const vector<path_seg
 		current_seg.yb = path[seg - 1].sy + (tcur / dt_cur)*dy;
 		current_seg.zb = path[seg - 1].sz + (tcur / dt_cur)*dz;
 	}
+
+	// Carry the segment's lateral beam width factor to the integration node
+	current_seg.wmod = path[seg].swidth;
 
 	// If we are sufficiently outside the domain, set power to zero (so it won't be added to integration)
 	if (Util::InRMax(current_seg.xb,current_seg.yb,sim.domain,sim.settings)){ current_seg.qmod = path[seg].sqmod; }
@@ -264,19 +280,32 @@ double Util::getMin(const vector<vector<double>>& df, int index) {
     }))[index];
 }
 
-std::array<double, 4> Util::getLengthWidthOrigin(const vector<vector<double>>& df, double resolution, const int x, const int y){
-    double length = Util::getMax(df, x) - Util::getMin(df, x) + resolution;
-    double width = Util::getMax(df, y) - Util::getMin(df, y) + resolution;
+// Bounding box of the liquid cell CENTRES, widened by one cell on each axis so
+// the box spans the cells' territory rather than their centres. The two axes
+// take their own resolutions: passing a single resolution for both (previously
+// zres, for an x/y extent) understated the width by yres - zres.
+//
+// For a field rotated out of grid alignment the padding is approximate -- the
+// cell footprint is no longer axis-aligned with the extent being measured. It is
+// exact for a scan parallel to an axis, where the rotated field equals the raw.
+std::array<double, 4> Util::getLengthWidthOrigin(const vector<vector<double>>& df, double xres, double yres, const int x, const int y){
+    double length = Util::getMax(df, x) - Util::getMin(df, x) + xres;
+    double width = Util::getMax(df, y) - Util::getMin(df, y) + yres;
     std::array<double, 2> origin = {getMin(df, x), getMin(df, y)};
     std::array<double, 4> stats = {length, width, origin[0], origin[1]};
     return stats;
 }
 
 
-double Util::getPerBoxMelted(const vector<vector<double>>& df, double length, double width, double resolution){
-    double melted_area = df.size() * pow(resolution, 2);
-    double box_area = length * width;
-    double per_box_melted = melted_area / box_area * 100;
+// Fraction of the pool's bounding box that is actually molten. `df` holds the
+// liquid cells in 3D, so this is a VOLUME fraction against the length x width x
+// depth box; comparing a 3D cell count against a 2D box area (and with a single
+// resolution standing in for all three axes) did not yield a fraction at all.
+double Util::getPerBoxMelted(const vector<vector<double>>& df, double length, double width, double depth, double xres, double yres, double zres){
+    double melted_volume = df.size() * xres * yres * zres;
+    double box_volume = length * width * depth;
+    if (box_volume <= 0.0) {return std::numeric_limits<double>::quiet_NaN();}
+    double per_box_melted = melted_volume / box_volume * 100;
     if (per_box_melted <= 100.0) {return per_box_melted;}
     else {return std::numeric_limits<double>::quiet_NaN();}
 }

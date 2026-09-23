@@ -39,7 +39,7 @@ namespace Util {
 	// Function to cleat all nodes
 	void	ClearNodes(Nodes&);
 	// Checks if it is inside the maximum radius
-	bool	InRMax(const double, const double, const Domain&, const Settings&);
+	bool	InRMax(const Real, const Real, const Domain&, const Settings&);
 	// Calculates the time to integrate back to
 	double	t0calc(const double, const Beam&, const Material&, const Settings&);
 	// Gets the maximum allowable step size for a path segment
@@ -54,7 +54,7 @@ namespace Util {
 	// Calculates bounds of scan path
 	void	Calc_ScanBounds(Domain&, const vector<vector<path_seg>>&);
 	// Calculates the nondimensional integration time
-	void	Calc_NonD_dt(vector<Beam>&, const Material&);
+	void	Calc_NonD_dt(vector<Beam>&, const Material&, const double);
 	// Calculates the maximum radius around the domain to be considered
 	void	Calc_RMax(Simdat&);
 
@@ -64,7 +64,7 @@ namespace Util {
 	double getMin(const vector<vector<double>>&, int);
 	double getMax(const vector<vector<double>>&, int);
 	// Calculates length, width and origin of melt pool
-	array<double, 4> getLengthWidthOrigin(const vector<vector<double>>&, double, const int, const int);
+	array<double, 4> getLengthWidthOrigin(const vector<vector<double>>&, double, double, const int, const int);
 	// Calculates percentage of the melt pool box that is melted
-	double getPerBoxMelted(const vector<vector<double>>&, double, double, double);
+	double getPerBoxMelted(const vector<vector<double>>&, double, double, double, double, double, double);
 	}

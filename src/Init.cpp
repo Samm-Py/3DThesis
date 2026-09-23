@@ -13,6 +13,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <cmath>
 #include <cstdint>
 #include <cfloat>
@@ -221,6 +222,17 @@ void	Init::SetValues(double& simValue, string input, double simDefault, string n
 	return;
 }
 
+#ifdef THESIS_ENABLE_OTI
+void	Init::SetValues(Real& simValue, string input, double simDefault, string name, int err, const bool print) {
+	if (input == string("")) {
+		simValue = simDefault;
+		Init::setPrint(simDefault, name, err, print);
+	}
+	else { simValue = std::stod(input); }
+	return;
+}
+#endif
+
 void    Init::checkAsterisks(const std::string s, const std::string del, const std::string file, const bool print) {
 	// If there are multiple '*', there is a problem
 	if (s.find(del) != string::npos) {
@@ -290,8 +302,9 @@ void	Init::MakeDataDirectory(const string& file) {
 void	Init::ReadSimParams(Simdat& sim) {
 
 	Init::FileRead_Beams(sim.beams, sim.files.beam, sim.print);				// Read beam files
-	Init::FileRead_Material(sim.material, sim.files.material, sim.print); Util::Calc_NonD_dt(sim.beams, sim.material);		// Read material properties // Calculate nonDimensional integration time for all beams
+	Init::FileRead_Material(sim.material, sim.files.material, sim.print);	// Read material properties
 	Init::FileRead_Paths(sim.paths, sim.files.path, sim.print); Util::Calc_AllScansEndTime(sim);	// Read path files	// Calculate Important Simulation Parameters
+	Util::Calc_NonD_dt(sim.beams, sim.material, sim.util.maxWidthMod);		// Calculate nonDimensional integration time for all beams (needs the paths' max width factor, hence after FileRead_Paths)
 	
 	Init::FileRead_Mode(sim, sim.files.mode);	// Initialize simulation mode
 
@@ -433,6 +446,11 @@ void	Init::FileRead_Material(Material& material, const string& file, const bool 
 	Init::SetValues(material.cps, values[0][3], 600.00, "Specific Heat", 1, print);
 	Init::SetValues(material.rho, values[0][4], 7451.0, "Density", 1, print);
 
+	// Material properties are no longer design variables (kon/rho/cps fixed),
+	// so they are left unseeded -- constant Reals with zero derivative. The
+	// derived diffusivity a therefore also carries no material derivative,
+	// which is exactly what we want for a controls-only sensitivity study.
+
 	Init::SetValues(material.cet_N0, values[1][0], DBL_MAX, "CET: N0", 0, print);
 	Init::SetValues(material.cet_n, values[1][1], DBL_MAX, "CET: n", 0, print);
 	Init::SetValues(material.cet_a, values[1][2], DBL_MAX, "CET: a", 0, print);
@@ -506,6 +524,11 @@ void	Init::FileRead_Beam(Beam& beam, const string& file, const bool print) {
 	Init::SetValues(beam.ay, values[0][1], 10.0e-6, "Y Width", 1, print);
 	Init::SetValues(beam.az, values[0][2], 1.0e-6, "Z Depth", 1, print);
 
+	// NOTE: beam power and width are no longer seeded here. The design
+	// variables DV_Q / DV_SIG attach to the CURRENT (last) path segment's
+	// effective power and width at quadrature-node construction (Calc.cpp),
+	// so dT_dQ / dT_dsig are exact per-segment control derivatives; the
+	// history deliberately carries zero derivative.
 	Init::SetValues(beam.q, values[1][0], 1200, "Power", 1, print);
 	Init::SetValues(beam.eff, values[1][1], 1.0, "Efficiency", 1, print);
 
@@ -576,9 +599,12 @@ void	Init::FileRead_Path(vector<path_seg>& path, const string& file, const bool 
 		seg.sz = 0.0;
 		seg.sqmod = 0.0;
 		seg.sparam = 0.0;
+		seg.swidth = 1.0;
 		path.push_back(seg);
 
-		//Read in path information from file
+		//Read in path information from file. Lines that do not parse (the
+		//header, blank lines) are skipped; the 7th column (per-segment beam
+		//width factor) is optional.
 		while (getline(pathfile, line)) {
 			seg.smode = 1;
 			seg.sx = 0.0;
@@ -586,11 +612,16 @@ void	Init::FileRead_Path(vector<path_seg>& path, const string& file, const bool 
 			seg.sz = 0.0;
 			seg.sqmod = 0.0;
 			seg.sparam = 0.0;
+			seg.swidth = 1.0;
 
 			stringstream ss(line);
 			if (!(ss >> seg.smode >> seg.sx >> seg.sy >> seg.sz >> seg.sqmod >> seg.sparam)) {
 				continue;
 			}
+			//Optional beam width factor; keeps 1.0 when the column is absent
+			//(a failed read stores 0)
+			ss >> seg.swidth;
+			if (seg.swidth <= 0.0) { seg.swidth = 1.0; }
 			seg.sx *= convert;
 			seg.sy *= convert;
 			seg.sz *= convert;
@@ -792,6 +823,7 @@ void	Init::FileRead_Settings(Settings& settings, const string& file, const bool 
 
 	subWords[2].push_back("MaxThreads");
 	subWords[2].push_back("PINT");
+	subWords[2].push_back("SeedSegment");
 
 	subWords[3].push_back("Overlap");
 
@@ -809,8 +841,17 @@ void	Init::FileRead_Settings(Settings& settings, const string& file, const bool 
 
 	Init::SetValues(settings.thnum, values[2][0], omp_get_max_threads()/2, "Number of Threads", 0, print);
 	Init::SetValues(settings.use_PINT, values[2][1], 0, "Parallel in Time Mode", 0, print);
+	Init::SetValues(settings.seed_seg, values[2][2], -1, "OTI Seed Segment", 0, print);
 
 	Init::SetValues(settings.mpi_overlap, values[3][0], 0, "Mpi Overlap", 0, print);
+
+	// A middle-segment seed cannot be zone-classified through compressed
+	// (combined) far-history nodes; refuse rather than silently
+	// mis-differentiate. The default (-1, last segment) is unaffected.
+	if (settings.seed_seg >= 0 && settings.compress) {
+		std::cout << "Input Error: Compute/SeedSegment requires Path/Compression 0" << std::endl;
+		exit(1);
+	}
 
 	return;
 }
