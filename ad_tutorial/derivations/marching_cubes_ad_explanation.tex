@@ -1,0 +1,211 @@
+\documentclass[12pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{microtype}
+\usepackage{parskip}
+
+\title{What Would It Mean to Differentiate Marching Cubes?}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{1. Marching cubes as a function}
+
+For fixed process parameters
+$\boldsymbol{\theta}=(P,\sigma,v)^{\mathsf T}$, the heat-transfer model
+provides temperatures on a three-dimensional grid,
+\begin{equation}
+  T_{ijk}=T(x_i,y_j,z_k;\boldsymbol{\theta}).
+\end{equation}
+Marching cubes may be viewed abstractly as the function
+\begin{equation}
+  \mathcal M:
+  \left(
+    \{T_{ijk}\},\,T_{\mathrm{liq}},\,\text{grid geometry}
+  \right)
+  \longmapsto
+  (V,F),
+  \label{eq:marching-cubes-map}
+\end{equation}
+where $V$ contains the vertices of the extracted liquidus isosurface and
+$F$ contains its triangular faces. The process parameters are not explicit
+inputs to $\mathcal M$. Their effects enter through the sampled temperatures
+$T_{ijk}(\boldsymbol{\theta})$.
+
+The melt-pool dimensions are subsequently calculated from the isosurface
+vertices. If $V_y$ and $V_z$ denote their transverse and vertical
+coordinates, respectively, then
+\begin{equation}
+  w=\frac{\max(V_y)-\min(V_y)}{2},
+  \qquad
+  d=-\min(V_z).
+  \label{eq:mesh-dimensions}
+\end{equation}
+Thus, the complete numerical measurement may be represented as
+\begin{equation}
+  \boldsymbol{\theta}
+  \longrightarrow
+  \{T_{ijk}\}
+  \longrightarrow
+  \mathcal M(\{T_{ijk}\})
+  \longrightarrow
+  (w,d).
+  \label{eq:measurement-chain}
+\end{equation}
+
+\section*{2. What direct AD through marching cubes would require}
+
+In an OTI calculation, every input temperature would carry both its real
+value and its process-parameter derivatives. Schematically,
+\begin{equation}
+  T_{ijk}^{\mathrm{OTI}}
+  =
+  T_{ijk}
+  +\varepsilon_P\frac{\partial T_{ijk}}{\partial P}
+  +\varepsilon_\sigma\frac{\partial T_{ijk}}{\partial\sigma}
+  +\varepsilon_v\frac{\partial T_{ijk}}{\partial v}.
+  \label{eq:oti-temperature}
+\end{equation}
+
+Marching cubes first compares the temperatures at the corners of each grid
+cell with $T_{\mathrm{liq}}$ to determine which cell edges intersect the
+liquidus surface. For an intersected edge with endpoints $a$ and $b$, a
+surface vertex is obtained by interpolation:
+\begin{align}
+  \lambda
+  &=\frac{T_{\mathrm{liq}}-T_a}{T_b-T_a},\\
+  \mathbf{x}_{\mathrm{surf}}
+  &=\mathbf{x}_a
+    +\lambda(\mathbf{x}_b-\mathbf{x}_a).
+  \label{eq:edge-interpolation}
+\end{align}
+If $T_a$ and $T_b$ are OTI quantities and the arithmetic in
+Equation~\eqref{eq:edge-interpolation} is performed using OTI operations,
+then the resulting vertex coordinates also carry derivatives:
+\begin{equation}
+  \mathbf{x}_{\mathrm{surf}}^{\mathrm{OTI}}
+  =
+  \mathbf{x}_{\mathrm{surf}}
+  +\varepsilon_P
+    \frac{\partial\mathbf{x}_{\mathrm{surf}}}{\partial P}
+  +\varepsilon_\sigma
+    \frac{\partial\mathbf{x}_{\mathrm{surf}}}{\partial\sigma}
+  +\varepsilon_v
+    \frac{\partial\mathbf{x}_{\mathrm{surf}}}{\partial v}.
+\end{equation}
+
+Obtaining $\partial w/\partial\theta_j$ and
+$\partial d/\partial\theta_j$ directly would then require propagating these
+OTI-valued vertices through the minimum and maximum operations in
+Equation~\eqref{eq:mesh-dimensions}. Therefore, ``AD of marching cubes''
+would actually mean differentiating the entire chain
+\begin{equation}
+  \boxed{
+  \text{OTI temperature grid}
+  \longrightarrow
+  \text{isosurface vertices}
+  \longrightarrow
+  \text{extremal vertices}
+  \longrightarrow
+  (w,d)}.
+\end{equation}
+
+\section*{3. Why direct differentiation is awkward}
+
+The interpolation in Equation~\eqref{eq:edge-interpolation} is differentiable
+as long as the same edge continues to contain the surface intersection. Other
+parts of marching cubes are discrete:
+\begin{itemize}
+  \item comparisons with $T_{\mathrm{liq}}$ select one of the possible cell
+        configurations;
+  \item the selected configuration determines the number and connectivity of
+        the surface triangles; and
+  \item the minimum and maximum operations select which mesh vertices define
+        the reported dimensions.
+\end{itemize}
+AD can propagate derivatives through one fixed selection of these branches.
+However, the derivative can be discontinuous or undefined when a perturbation
+changes the marching-cubes configuration or causes a different vertex to
+become extremal. A standard marching-cubes implementation also expects an
+ordinary real-valued array and therefore cannot directly operate on OTI
+objects without being rewritten or adapted.
+
+\section*{4. The implicit alternative}
+
+The present method avoids differentiating this discrete geometry pipeline.
+Define
+\begin{equation}
+  F(\mathbf{x};\boldsymbol{\theta})
+  =T(\mathbf{x};\boldsymbol{\theta})-T_{\mathrm{liq}}.
+\end{equation}
+Every point $\mathbf{x}^*(\boldsymbol{\theta})$ on the liquidus surface
+satisfies
+\begin{equation}
+  F(\mathbf{x}^*(\boldsymbol{\theta});\boldsymbol{\theta})=0.
+\end{equation}
+Differentiation with respect to a process parameter $\theta_j$ gives
+\begin{equation}
+  \nabla_{\mathbf{x}}F\mathbin{\cdot}
+  \frac{\partial\mathbf{x}^*}{\partial\theta_j}
+  +F_{\theta_j}=0.
+  \label{eq:implicit-general}
+\end{equation}
+
+At a transverse extremum, the surface normal is aligned with the
+$y$-direction. Equation~\eqref{eq:implicit-general} therefore reduces to
+\begin{equation}
+  \frac{\partial y^*}{\partial\theta_j}
+  =-\frac{T_{\theta_j}}{T_y}.
+  \label{eq:transverse-sensitivity}
+\end{equation}
+At the deepest point,
+\begin{equation}
+  \frac{\partial z_{\min}}{\partial\theta_j}
+  =-\frac{T_{\theta_j}}{T_z},
+  \qquad
+  \frac{\partial d}{\partial\theta_j}
+  =\frac{T_{\theta_j}}{T_z},
+  \label{eq:depth-sensitivity}
+\end{equation}
+because $d=-z_{\min}$. Combining the two transverse extrema gives
+\begin{equation}
+  \frac{\partial w}{\partial\theta_j}
+  =\frac{1}{2}
+  \left[
+    -\left.\frac{T_{\theta_j}}{T_y}\right|_{\mathbf{x}_{y^+}}
+    +\left.\frac{T_{\theta_j}}{T_y}\right|_{\mathbf{x}_{y^-}}
+  \right].
+  \label{eq:width-sensitivity}
+\end{equation}
+
+The ratio in Equations~\eqref{eq:transverse-sensitivity}--
+\eqref{eq:width-sensitivity} has a simple interpretation:
+\begin{equation}
+  \text{boundary displacement}
+  =-\frac{\text{temperature change caused by the parameter}}
+          {\text{temperature change per unit distance}}.
+\end{equation}
+The OTI parameter derivative supplies the numerator, while the spatial
+temperature gradient converts that temperature change into movement of the
+liquidus boundary.
+
+\section*{5. Original and current implementations}
+
+In the original implementation, the complete local grid was evaluated using
+OTI arithmetic. Marching cubes was applied only to the real temperature field,
+and the OTI derivative fields were interpolated to the three extremal points.
+The interpolated derivatives were then converted into geometric sensitivities
+using Equations~\eqref{eq:depth-sensitivity} and
+\eqref{eq:width-sensitivity}.
+
+The current implementation first evaluates the complete real-valued grid to
+locate the liquidus extrema. It then evaluates OTI quantities only on the
+small interpolation stencils surrounding those points. This preserves the
+same local sensitivity calculation without differentiating marching cubes or
+carrying OTI quantities over the entire bounding box.
+
+\end{document}

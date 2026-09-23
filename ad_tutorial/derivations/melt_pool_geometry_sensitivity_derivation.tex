@@ -1,0 +1,190 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\Tliq}{T_{\mathrm{liq}}}
+\newcommand{\evalat}[2]{\left.#1\right|_{#2}}
+
+\title{From Temperature Sensitivities to Melt-Pool Geometry Sensitivities}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Liquidus points that define the geometry}
+
+Let $p$ denote one process parameter,
+\begin{equation}
+  p\in\{P,\sigma,v\},
+\end{equation}
+and let $T(\bm{x},p)$ be the temperature field for that parameter value.  The
+liquidus isotherm is the level set
+\begin{equation}
+  T(\bm{x},p)=\Tliq.
+\end{equation}
+
+The melt-pool width is defined by two geometric extrema of this isotherm:
+\begin{itemize}
+  \item $y^-(p)$ is the leftmost liquidus point;
+  \item $y^+(p)$ is the rightmost liquidus point.
+\end{itemize}
+Their locations depend on $p$ because changing the process parameter changes
+the temperature field and therefore moves the liquidus boundary.  Nevertheless,
+both moving points remain on the same liquidus isotherm:
+\begin{align}
+  T\bigl(\bm{x}^-(p),p\bigr) &= \Tliq, \\
+  T\bigl(\bm{x}^+(p),p\bigr) &= \Tliq.
+\end{align}
+The superscript $\pm$ identifies a spatial extremum; it is not a temperature
+maximum or minimum.  Both points have temperature $\Tliq$.
+
+\section{Motion of one liquidus edge}
+
+To expose the essential calculation, suppress the other spatial coordinates
+and write the right-edge condition as
+\begin{equation}
+  T\bigl(y^+(P),P\bigr)=\Tliq.
+  \label{eq:right-condition}
+\end{equation}
+The material is fixed, so $\Tliq$ does not depend on $P$.  Taking the total
+derivative of Equation~\eqref{eq:right-condition} gives
+\begin{equation}
+  \frac{\mathrm{d}}{\mathrm{d}P}
+  T\bigl(y^+(P),P\bigr)=0.
+\end{equation}
+Applying the chain rule,
+\begin{equation}
+  \evalat{T_y}{y^+}\frac{\partial y^+}{\partial P}
+  +\evalat{T_P}{y^+}=0,
+\end{equation}
+where
+\begin{equation}
+  T_y=\frac{\partial T}{\partial y},
+  \qquad
+  T_P=\frac{\partial T}{\partial P}.
+\end{equation}
+Solving for the motion of the right edge gives
+\begin{equation}
+  \boxed{
+  \frac{\partial y^+}{\partial P}
+  =-\evalat{\frac{T_P}{T_y}}{y^+}.}
+  \label{eq:right-motion}
+\end{equation}
+
+The same calculation at the left edge gives
+\begin{equation}
+  \boxed{
+  \frac{\partial y^-}{\partial P}
+  =-\evalat{\frac{T_P}{T_y}}{y^-}.}
+  \label{eq:left-motion}
+\end{equation}
+The signs of $T_y$ will normally differ at the two edges, but
+Equations~\eqref{eq:right-motion} and \eqref{eq:left-motion} have the same form.
+
+\section{From edge motion to width sensitivity}
+
+The controller uses the melt-pool \emph{half-width}
+\begin{equation}
+  w=\frac{y^+-y^-}{2}.
+  \label{eq:half-width}
+\end{equation}
+Differentiating Equation~\eqref{eq:half-width} with respect to $P$ gives
+\begin{equation}
+  \frac{\partial w}{\partial P}
+  =\frac{1}{2}
+  \left(
+    \frac{\partial y^+}{\partial P}
+    -\frac{\partial y^-}{\partial P}
+  \right).
+\end{equation}
+Substituting Equations~\eqref{eq:right-motion} and \eqref{eq:left-motion},
+\begin{align}
+  \frac{\partial w}{\partial P}
+  &=\frac{1}{2}
+  \left[
+    -\evalat{\frac{T_P}{T_y}}{y^+}
+    +\evalat{\frac{T_P}{T_y}}{y^-}
+  \right] \\
+  &=\boxed{
+  \frac{1}{2}
+  \left[
+    \evalat{\frac{T_P}{T_y}}{y^-}
+    -\evalat{\frac{T_P}{T_y}}{y^+}
+  \right].}
+  \label{eq:width-power}
+\end{align}
+
+The factor $1/2$ appears because $w$ is a half-width.  If the reported
+quantity were the full width $W=y^+-y^-$, this factor would be absent.
+
+\section{Physical interpretation of the ratio}
+
+At a fixed spatial point,
+\begin{itemize}
+  \item $T_P$ measures the temperature change produced by a change in power;
+  \item $T_y$ measures the temperature change produced by moving in the
+        transverse direction.
+\end{itemize}
+Therefore,
+\begin{equation}
+  -\frac{T_P}{T_y}
+\end{equation}
+converts a parameter-induced temperature change into the spatial displacement
+required for the point to remain at $T=\Tliq$.  Sampling this ratio at the two
+liquidus edges and combining their motions produces the width sensitivity.
+
+\section{General process parameter and depth sensitivity}
+
+Replacing $P$ by any $p\in\{P,\sigma,v\}$ gives
+\begin{equation}
+  \boxed{
+  \frac{\partial w}{\partial p}
+  =\frac{1}{2}
+  \left[
+    \evalat{\frac{T_p}{T_y}}{y^-}
+    -\evalat{\frac{T_p}{T_y}}{y^+}
+  \right].}
+  \label{eq:general-width}
+\end{equation}
+
+Let $z^-(p)$ be the deepest liquidus point and define the positive depth by
+\begin{equation}
+  d=-z^-.
+\end{equation}
+Implicit differentiation of the liquidus condition at $z^-$ gives
+\begin{equation}
+  \frac{\partial z^-}{\partial p}
+  =-\evalat{\frac{T_p}{T_z}}{z^-}.
+\end{equation}
+Consequently,
+\begin{equation}
+  \boxed{
+  \frac{\partial d}{\partial p}
+  =\evalat{\frac{T_p}{T_z}}{z^-}.}
+  \label{eq:general-depth}
+\end{equation}
+
+Equations~\eqref{eq:general-width} and \eqref{eq:general-depth}, evaluated for
+$p=P,\sigma,v$, form the $2\times3$ geometry Jacobian used by the controller.
+
+\section{Assumptions}
+
+The formulas assume that the relevant liquidus extremum is locally smooth and
+unique, and that the required spatial gradient is nonzero: $T_y\neq0$ at the
+width edges and $T_z\neq0$ at the deepest point.  In the full three-dimensional
+notation, the moving-point condition is
+\begin{equation}
+  T\bigl(\bm{x}^*(p),p\bigr)=\Tliq,
+\end{equation}
+and its total derivative is
+\begin{equation}
+  \nabla T\cdot\frac{\mathrm{d}\bm{x}^*}{\mathrm{d}p}+T_p=0.
+\end{equation}
+At a smooth support point, the tangency/extremum condition reduces this vector
+relation to the one-dimensional edge and depth expressions used above.
+
+\end{document}
