@@ -26,9 +26,10 @@ using std::list;
 
 #define PI 3.14159265358979323846
 
-// Integration segment. Coordinates come from the (double) scan path, but the
-// diffusion/weight/power fields are Real so they can carry the material- and
-// beam-power derivatives.
+// Integration segment. Coordinates come from the (double) scan path; the
+// diffusion, weight and power fields are Real so they carry the seeded
+// segment's control derivatives (Q, sigma, v, tau) into the quadrature nodes.
+// Calc.cpp applies those seeds.
 struct int_seg {
 	Real xb, yb, zb, phix, phiy, phiz, dtau, qmod;
 	double wmod = 1.0; // lateral beam width factor of the source segment
@@ -69,9 +70,10 @@ struct FileNames {
 	                     // snapshot slices don't clobber a shared filename
 };
 
-// Material constants. Thermophysical properties are Real so derivatives w.r.t.
-// conductivity/density/specific-heat propagate (diffusivity a inherits them);
-// the CET fit parameters stay double (post-processing only).
+// Material constants. Thermophysical properties are Real but never seeded
+// (see Init::FileRead_Material), so they carry zero derivative; being Real,
+// any of them could become a design variable by seeding it where it is read.
+// The CET fit parameters stay double (post-processing only).
 struct Material {
 	Real kon; // Thermal Conductivty
 	Real rho; // Density
@@ -82,8 +84,10 @@ struct Material {
 	double cet_a, cet_n, cet_N0; // Parameters for CET
 };
 
-// Beam specific parameters. Power q is a Real design variable; beam shape and
-// the adaptive nondimensional timestep stay double.
+// Beam specific parameters. q, ax and ay are Real because the seeded segment's
+// power and lateral width are built from them; the seeds themselves are applied
+// per segment in Calc.cpp, not here. Depth, efficiency and the adaptive
+// nondimensional timestep stay double.
 struct Beam {
 	Real ax, ay;       // Lateral beam widths: Real so dT/d(sigma) propagates (DV_SIG)
 	double az;         // Depth/absorption sigma: fixed material property, not a control
