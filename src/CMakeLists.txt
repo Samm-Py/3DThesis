@@ -37,9 +37,21 @@ target_link_libraries(Thesis PUBLIC OpenMP::OpenMP_CXX)
 # Optional automatic differentiation: make Real an OTI number from cpp_oti_lib
 # (see oti_scalar.h). Default OFF -> Real is plain double, build unchanged.
 option(THESIS_ENABLE_OTI "Use cpp_oti_lib OTI numbers as the Real type (automatic differentiation)" OFF)
-set(THESIS_OTI_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../cpp_oti_lib/include"
-    CACHE PATH "Path to the cpp_oti_lib include directory")
 if(THESIS_ENABLE_OTI)
+  # cpp_oti_lib is header-only and published as Sparrow
+  # (https://github.com/ORNL-MDF/Sparrow). Without an explicit
+  # -DTHESIS_OTI_INCLUDE_DIR, look for a checkout next to this repository.
+  find_path(THESIS_OTI_INCLUDE_DIR otinum/otinum.hpp
+    HINTS "${PROJECT_SOURCE_DIR}/../Sparrow/include"
+          "${PROJECT_SOURCE_DIR}/../cpp_oti_lib/include"
+          "${PROJECT_SOURCE_DIR}/../../cpp_oti_lib/include"
+    DOC "Path to the cpp_oti_lib (Sparrow) include directory")
+  if(NOT EXISTS "${THESIS_OTI_INCLUDE_DIR}/otinum/otinum.hpp")
+    message(FATAL_ERROR
+      "THESIS_ENABLE_OTI=ON but otinum/otinum.hpp was not found. Clone "
+      "https://github.com/ORNL-MDF/Sparrow next to this repository, or pass "
+      "-DTHESIS_OTI_INCLUDE_DIR=/path/to/Sparrow/include")
+  endif()
   message(STATUS "Thesis Real type: OTI (cpp_oti_lib at ${THESIS_OTI_INCLUDE_DIR})")
   target_compile_definitions(Thesis PUBLIC THESIS_ENABLE_OTI)
   target_include_directories(Thesis PUBLIC $<BUILD_INTERFACE:${THESIS_OTI_INCLUDE_DIR}>)
