@@ -416,7 +416,7 @@ void	Init::FileRead_Mode_Solidification(Simdat& sim, const string& file) {
 	Init::SetValues(sim.param.tracking, values[0][0], string("None"), "Tracking", 0, sim.print);
 	Init::SetValues(sim.param.dt, values[0][1], 1e-5, "Timestep", 0, sim.print);
 	Init::SetValues(sim.param.out_freq, values[0][2], INT_MAX, "Output Frequency", 0, sim.print);
-	Init::SetValues(sim.param.radiusCheck, values[0][3], 1.0, "Check Radius", 0, sim.print);
+	Init::SetValues(sim.param.radiusCheck, values[0][3], -1.0, "Check Radius", 0, sim.print);
 	Init::SetValues(sim.param.secondary, values[0][4], 0, "Secondary Solidfication", 0, sim.print);
 }
 
@@ -602,13 +602,10 @@ void	Init::FileRead_Path(vector<path_seg>& path, const string& file, const bool 
 		seg.swidth = 1.0;
 		path.push_back(seg);
 
-		//Skip the header line
-		getline(pathfile, line);
-
-		//Read in path information from file. Each line is parsed on its own so
-		//the 7th column (per-segment beam width factor) can be optional.
-		while (getline(pathfile, line))
-		{
+		//Read in path information from file. Lines that do not parse (the
+		//header, blank lines) are skipped; the 7th column (per-segment beam
+		//width factor) is optional.
+		while (getline(pathfile, line)) {
 			seg.smode = 1;
 			seg.sx = 0.0;
 			seg.sy = 0.0;
@@ -617,14 +614,14 @@ void	Init::FileRead_Path(vector<path_seg>& path, const string& file, const bool 
 			seg.sparam = 0.0;
 			seg.swidth = 1.0;
 
-			std::istringstream lineStream(line);
-			if (!(lineStream >> seg.smode >> seg.sx >> seg.sy >> seg.sz >> seg.sqmod >> seg.sparam)) {
-				continue; // blank or malformed line
+			stringstream ss(line);
+			if (!(ss >> seg.smode >> seg.sx >> seg.sy >> seg.sz >> seg.sqmod >> seg.sparam)) {
+				continue;
 			}
 			//Optional beam width factor; keeps 1.0 when the column is absent
-			lineStream >> seg.swidth;
+			//(a failed read stores 0)
+			ss >> seg.swidth;
 			if (seg.swidth <= 0.0) { seg.swidth = 1.0; }
-
 			seg.sx *= convert;
 			seg.sy *= convert;
 			seg.sz *= convert;
@@ -873,12 +870,14 @@ void	Init::FileRead_Points(Domain& domain, const string& file, const bool print)
 		temp.y = 0.0;
 		temp.z = 0.0;
 
-		//Read in path information from file
-		while (getline(readFile, line))
-		{
-			readFile >> temp.x >> temp.y >> temp.z;
+		//Read in point information from file
+		while (getline(readFile, line)) {
+			stringstream ss(line);
+			if (!(ss >> temp.x >> temp.y >> temp.z)) {
+				continue;
+			}
 			temp.x /= 1000.0; temp.y /= 1000.0; temp.z /= 1000.0;
-			domain.points.push_back(temp); 
+			domain.points.push_back(temp);
 			num_read++;
 		}
 	}
@@ -941,7 +940,7 @@ void	Init::SetDomainParams(Domain& domain) {
 		domain.znum = 1 + int(0.5 + (domain.zmax - domain.zmin) / domain.zres);
 		domain.zmax = domain.zmin + (domain.znum - 1) * domain.zres;
 	}
-	else if (domain.ynum != 1) {
+	else if (domain.znum != 1) {
 		domain.zres = (domain.zmax - domain.zmin) / (domain.znum - 1);
 	}
 	else {
