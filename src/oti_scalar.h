@@ -27,8 +27,8 @@ namespace thesis {
 //   X,Y,Z -> spatial gradient dT/dn at the isotherm (implicit-function edge sens)
 //   Q     -> SEEDED segment's effective beam power (W)   (control)
 //   SIG   -> SEEDED segment's lateral beam width (m)     (control; ax and ay together)
-//   V     -> SEEDED segment's scan speed (m/s)           (control)
-//   DWELL -> SEEDED beam-off dwell row's duration (s)    (control)
+//   V     -> SEEDED moving segment's scan speed (m/s)    (control)
+//   TAU   -> SEEDED beam-off dwell duration (s)          (control)
 // The seeded segment defaults to the LAST line of the path file (per path) --
 // the optimizer's "current" segment -- and can be pointed at any HISTORY
 // segment via Settings.txt Compute/SeedSegment (0-based path-row index) for
@@ -45,12 +45,11 @@ namespace thesis {
 // unlike Q/SIG, dT_dv has a history channel; see the three-zone rule
 // (SeedCtx / dv_tau) in Calc.cpp. Beam POSITIONS are v-independent
 // (geometry fixed), so no spatial term.
-// DWELL is V's simpler sibling: a beam-off dwell row carries no nodes (culled
-// by qmod>0), so ONLY the earlier-node history shift survives -- no stretch,
-// no weight channel. Seeding the dwell duration reuses dv_tau's history branch
-// verbatim; see the dwell branch of SeedCtx in Calc.cpp.
+// A seeded beam-off dwell is also a timing control. Increasing its duration
+// shifts the observation time relative to every node deposited before the
+// dwell, while nodes deposited after it shift with the observation and cancel.
 // Material properties (kon/rho/cps) are NOT differentiated -- they are fixed,
-// not controls -- which keeps the algebra small (M=7).
+// not controls.
 // DV_COUNT (kept last) is the number of directions, i.e. the OTI parameter M.
 enum DesignVar {
     DV_X = 0,   // evaluation point x
@@ -59,7 +58,7 @@ enum DesignVar {
     DV_Q,       // current segment's beam power (W)
     DV_SIG,     // current segment's lateral beam width sigma (m)
     DV_V,       // current segment's scan speed (m/s)
-    DV_DWELL,   // SEEDED beam-off dwell row's duration (s)     (control)
+    DV_TAU,     // beam-off turnaround dwell duration (s)
     DV_COUNT
 };
 

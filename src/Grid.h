@@ -162,7 +162,7 @@ public:
 				{"dT_dx",   thesis::DV_X},   {"dT_dy",   thesis::DV_Y},
 				{"dT_dz",   thesis::DV_Z},   {"dT_dQ",   thesis::DV_Q},
 				{"dT_dsig", thesis::DV_SIG}, {"dT_dv",   thesis::DV_V},
-				{"dT_ddwell", thesis::DV_DWELL},
+				{"dT_dtau", thesis::DV_TAU},
 			};
 			for (const auto& col : oti_cols) {
 				const int dv = col.second;
